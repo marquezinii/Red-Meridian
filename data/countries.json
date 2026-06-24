@@ -1,0 +1,339 @@
+[
+  {
+    "id": "BRA",
+    "name": "Brasil",
+    "short_name": "BRA",
+    "capital": "Brasilia",
+    "region": "America do Sul",
+    "bloc": "Nao alinhado",
+    "leader": "Pendente de pesquisa",
+    "color": "#4FA35D",
+    "map": { "x": 0.34, "y": 0.67 },
+    "stats": {
+      "gdp": 2200,
+      "stability": 62,
+      "military": 48,
+      "readiness": 42,
+      "diplomacy": 58,
+      "tension": 18
+    },
+    "focuses": [
+      {
+        "id": "bra_industrial_base",
+        "title": "Reindustrializacao seletiva",
+        "description": "Fortalece setores estrategicos e melhora a capacidade economica de longo prazo.",
+        "duration_days": 35,
+        "effects": { "gdp": 55, "stability": 2, "readiness": 1 }
+      },
+      {
+        "id": "bra_amazon_surveillance",
+        "title": "Monitoramento da Amazonia",
+        "description": "Expande sensores, vigilancia aerea e presenca logistica na regiao norte.",
+        "duration_days": 42,
+        "effects": { "military": 3, "readiness": 4, "diplomacy": 1 }
+      },
+      {
+        "id": "bra_regional_diplomacy",
+        "title": "Pacto regional de estabilidade",
+        "description": "Reduz tensoes diplomaticas e melhora relacoes com vizinhos.",
+        "duration_days": 28,
+        "effects": { "diplomacy": 4, "tension": -3, "global_tension": -1 }
+      }
+    ]
+  },
+  {
+    "id": "USA",
+    "name": "Estados Unidos",
+    "short_name": "USA",
+    "capital": "Washington, D.C.",
+    "region": "America do Norte",
+    "bloc": "OTAN",
+    "leader": "Pendente de pesquisa",
+    "color": "#4C7BD9",
+    "map": { "x": 0.23, "y": 0.36 },
+    "stats": {
+      "gdp": 27000,
+      "stability": 58,
+      "military": 92,
+      "readiness": 78,
+      "diplomacy": 72,
+      "tension": 38
+    },
+    "focuses": [
+      {
+        "id": "usa_force_projection",
+        "title": "Projecao de forca global",
+        "description": "Reorganiza comandos e melhora prontidao em teatros distantes.",
+        "duration_days": 42,
+        "effects": { "military": 2, "readiness": 5, "global_tension": 2 }
+      },
+      {
+        "id": "usa_supply_resilience",
+        "title": "Cadeias criticas resilientes",
+        "description": "Reduz dependencia externa em setores sensiveis.",
+        "duration_days": 35,
+        "effects": { "gdp": 240, "stability": 1, "diplomacy": -1 }
+      },
+      {
+        "id": "usa_alliance_management",
+        "title": "Gestao de aliancas",
+        "description": "Aumenta a coordenacao diplomatica e militar com parceiros.",
+        "duration_days": 30,
+        "effects": { "diplomacy": 3, "readiness": 2, "global_tension": -1 }
+      }
+    ]
+  },
+  {
+    "id": "CHN",
+    "name": "China",
+    "short_name": "CHN",
+    "capital": "Pequim",
+    "region": "Asia Oriental",
+    "bloc": "Potencia continental",
+    "leader": "Pendente de pesquisa",
+    "color": "#C83737",
+    "map": { "x": 0.75, "y": 0.43 },
+    "stats": {
+      "gdp": 17800,
+      "stability": 70,
+      "military": 86,
+      "readiness": 74,
+      "diplomacy": 60,
+      "tension": 44
+    },
+    "focuses": [
+      {
+        "id": "chn_maritime_access",
+        "title": "Acesso maritimo contestado",
+        "description": "Prioriza presenca naval e infraestrutura de apoio.",
+        "duration_days": 42,
+        "effects": { "military": 3, "readiness": 3, "global_tension": 2 }
+      },
+      {
+        "id": "chn_tech_sovereignty",
+        "title": "Soberania tecnologica",
+        "description": "Investe em chips, energia e automacao industrial.",
+        "duration_days": 40,
+        "effects": { "gdp": 180, "stability": 1, "diplomacy": -1 }
+      },
+      {
+        "id": "chn_regional_trade",
+        "title": "Comercio regional integrado",
+        "description": "Aumenta influencia economica e reduz atritos de curto prazo.",
+        "duration_days": 30,
+        "effects": { "diplomacy": 3, "gdp": 90, "global_tension": -1 }
+      }
+    ]
+  },
+  {
+    "id": "RUS",
+    "name": "Russia",
+    "short_name": "RUS",
+    "capital": "Moscou",
+    "region": "Eurasia",
+    "bloc": "Potencia continental",
+    "leader": "Pendente de pesquisa",
+    "color": "#9A5CC8",
+    "map": { "x": 0.60, "y": 0.31 },
+    "stats": {
+      "gdp": 2100,
+      "stability": 54,
+      "military": 82,
+      "readiness": 68,
+      "diplomacy": 42,
+      "tension": 52
+    },
+    "focuses": [
+      {
+        "id": "rus_strategic_deterrence",
+        "title": "Dissuasao estrategica",
+        "description": "Aumenta a pressao militar e a prontidao de forcas estrategicas.",
+        "duration_days": 35,
+        "effects": { "military": 2, "readiness": 4, "global_tension": 3 }
+      },
+      {
+        "id": "rus_energy_leverage",
+        "title": "Alavancagem energetica",
+        "description": "Usa exportacoes de energia para estabilizar receita e influencia.",
+        "duration_days": 30,
+        "effects": { "gdp": 60, "diplomacy": 2, "stability": 1 }
+      },
+      {
+        "id": "rus_internal_security",
+        "title": "Seguranca interna",
+        "description": "Aumenta controle interno com custo diplomatico.",
+        "duration_days": 28,
+        "effects": { "stability": 4, "diplomacy": -2 }
+      }
+    ]
+  },
+  {
+    "id": "DEU",
+    "name": "Alemanha",
+    "short_name": "DEU",
+    "capital": "Berlim",
+    "region": "Europa",
+    "bloc": "Uniao Europeia",
+    "leader": "Pendente de pesquisa",
+    "color": "#D8B44A",
+    "map": { "x": 0.51, "y": 0.40 },
+    "stats": {
+      "gdp": 4500,
+      "stability": 66,
+      "military": 55,
+      "readiness": 48,
+      "diplomacy": 76,
+      "tension": 24
+    },
+    "focuses": [
+      {
+        "id": "deu_defense_readiness",
+        "title": "Prontidao da Bundeswehr",
+        "description": "Acelera modernizacao e disponibilidade operacional.",
+        "duration_days": 40,
+        "effects": { "military": 4, "readiness": 5, "global_tension": 1 }
+      },
+      {
+        "id": "deu_energy_transition",
+        "title": "Transicao energetica segura",
+        "description": "Equilibra seguranca energetica e estabilidade economica.",
+        "duration_days": 35,
+        "effects": { "gdp": 70, "stability": 2, "diplomacy": 1 }
+      },
+      {
+        "id": "deu_eu_coordination",
+        "title": "Coordenacao europeia",
+        "description": "Aumenta influencia diplomatica e reduz tensao regional.",
+        "duration_days": 28,
+        "effects": { "diplomacy": 4, "global_tension": -1 }
+      }
+    ]
+  },
+  {
+    "id": "IND",
+    "name": "India",
+    "short_name": "IND",
+    "capital": "Nova Delhi",
+    "region": "Sul da Asia",
+    "bloc": "Nao alinhado",
+    "leader": "Pendente de pesquisa",
+    "color": "#E28F3C",
+    "map": { "x": 0.68, "y": 0.55 },
+    "stats": {
+      "gdp": 3700,
+      "stability": 64,
+      "military": 74,
+      "readiness": 61,
+      "diplomacy": 66,
+      "tension": 31
+    },
+    "focuses": [
+      {
+        "id": "ind_industrial_corridors",
+        "title": "Corredores industriais",
+        "description": "Expande infraestrutura e capacidade produtiva.",
+        "duration_days": 35,
+        "effects": { "gdp": 95, "stability": 1 }
+      },
+      {
+        "id": "ind_border_readiness",
+        "title": "Prontidao de fronteira",
+        "description": "Melhora logistica e vigilancia em fronteiras sensiveis.",
+        "duration_days": 34,
+        "effects": { "military": 3, "readiness": 4, "global_tension": 1 }
+      },
+      {
+        "id": "ind_multi_alignment",
+        "title": "Multi-alinhamento",
+        "description": "Mantem pontes diplomaticas com blocos concorrentes.",
+        "duration_days": 26,
+        "effects": { "diplomacy": 5, "global_tension": -1 }
+      }
+    ]
+  },
+  {
+    "id": "JPN",
+    "name": "Japao",
+    "short_name": "JPN",
+    "capital": "Toquio",
+    "region": "Asia Oriental",
+    "bloc": "Aliado dos EUA",
+    "leader": "Pendente de pesquisa",
+    "color": "#E8EEF8",
+    "map": { "x": 0.83, "y": 0.42 },
+    "stats": {
+      "gdp": 4200,
+      "stability": 72,
+      "military": 60,
+      "readiness": 64,
+      "diplomacy": 70,
+      "tension": 35
+    },
+    "focuses": [
+      {
+        "id": "jpn_maritime_shield",
+        "title": "Escudo maritimo",
+        "description": "Aumenta defesa naval, aerea e antimissil.",
+        "duration_days": 38,
+        "effects": { "military": 3, "readiness": 4, "global_tension": 1 }
+      },
+      {
+        "id": "jpn_semiconductor_policy",
+        "title": "Politica de semicondutores",
+        "description": "Estimula tecnologia avancada e cadeias produtivas locais.",
+        "duration_days": 35,
+        "effects": { "gdp": 75, "stability": 1, "diplomacy": 1 }
+      },
+      {
+        "id": "jpn_pacific_partnerships",
+        "title": "Parcerias do Pacifico",
+        "description": "Aprofunda coordenacao regional sem escalar crise.",
+        "duration_days": 30,
+        "effects": { "diplomacy": 4, "readiness": 1, "global_tension": -1 }
+      }
+    ]
+  },
+  {
+    "id": "ZAF",
+    "name": "Africa do Sul",
+    "short_name": "ZAF",
+    "capital": "Pretoria",
+    "region": "Africa Austral",
+    "bloc": "Nao alinhado",
+    "leader": "Pendente de pesquisa",
+    "color": "#6EB4B8",
+    "map": { "x": 0.54, "y": 0.76 },
+    "stats": {
+      "gdp": 420,
+      "stability": 48,
+      "military": 38,
+      "readiness": 36,
+      "diplomacy": 55,
+      "tension": 16
+    },
+    "focuses": [
+      {
+        "id": "zaf_grid_recovery",
+        "title": "Recuperacao da rede eletrica",
+        "description": "Reduz gargalos economicos e melhora estabilidade.",
+        "duration_days": 34,
+        "effects": { "gdp": 18, "stability": 4 }
+      },
+      {
+        "id": "zaf_regional_security",
+        "title": "Seguranca regional",
+        "description": "Aumenta capacidade de resposta em crises regionais.",
+        "duration_days": 30,
+        "effects": { "military": 2, "readiness": 3, "diplomacy": 1 }
+      },
+      {
+        "id": "zaf_brics_bridge",
+        "title": "Ponte entre blocos",
+        "description": "Usa posicao diplomatica para mediar interesses concorrentes.",
+        "duration_days": 28,
+        "effects": { "diplomacy": 4, "global_tension": -1 }
+      }
+    ]
+  }
+]
+
