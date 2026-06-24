@@ -27,6 +27,7 @@ The launcher searches for a local Godot 4 installation and opens this folder as 
 ## Implemented Prototype Features
 
 - Main 2D strategy screen.
+- Main menu with Single Player, Multiplayer placeholder, Settings, About, and Quit.
 - Abstract clickable strategic map.
 - Real countries represented as simulated entities.
 - Basic date, pause, and speed controls.
@@ -35,7 +36,17 @@ The launcher searches for a local Godot 4 installation and opens this folder as 
 - National focus entries with duration and effects.
 - Player country selection.
 - Early strategic event model.
+- Runtime settings screen with General, Display, Graphics, and Audio tabs.
+- Initial English and Brazilian Portuguese localization support.
 - External JSON data files for countries and events.
+
+## Validation
+
+The current project includes a small Godot smoke test for the menu flow:
+
+```powershell
+godot --headless --path . --script res://scripts/tests/MenuSmokeTest.gd
+```
 
 ## Project Direction
 

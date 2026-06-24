@@ -14,12 +14,17 @@ This roadmap is incremental. The project should remain openable and testable aft
 - [x] Confirm GitHub CLI access.
 - [x] Install and locate Godot on the development machine.
 - [x] Add the first strategic event model.
-- [ ] Test the desktop shortcut after launcher changes.
+- [x] Add the first main menu flow.
+- [x] Add settings tabs for general, display, graphics, and audio.
+- [x] Add initial English and Brazilian Portuguese localization.
+- [x] Add a Godot smoke test for menu navigation.
+- [x] Test the desktop shortcut launcher flow after launcher changes.
 
 ## Phase 1 - Minimum Playable Loop
 
 - [x] Select a player country during runtime.
-- [ ] Add a campaign start screen.
+- [x] Add a first-pass main menu before entering the campaign.
+- [ ] Add a dedicated campaign setup screen.
 - [ ] Add local save and load.
 - [ ] Add simple geopolitical events.
 - [ ] Add basic country-to-country relations.

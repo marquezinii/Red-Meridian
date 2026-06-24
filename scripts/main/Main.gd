@@ -3,9 +3,14 @@ extends Control
 const MapCanvasScript = preload("res://scripts/ui/MapCanvas.gd")
 const COUNTRY_DATA_PATH := "res://data/countries.json"
 const EVENTS_DATA_PATH := "res://data/events.json"
+const LOCALIZATION_DATA_PATH := "res://data/localization.json"
+const MENU_BACKGROUND_PATH := "res://assets/backgrounds/main_menu_background.png"
 
 var countries: Array = []
 var events: Array = []
+var localization: Dictionary = {}
+var current_screen := "menu"
+var current_language := "en"
 var selected_country_id := ""
 var player_country_id := ""
 var active_focuses: Dictionary = {}
@@ -21,6 +26,16 @@ var speed := 1
 var sim_accumulator := 0.0
 var global_tension := 18.0
 
+var settings_window_mode := "borderless"
+var settings_resolution := Vector2i(1920, 1080)
+var settings_vsync := true
+var settings_graphics_preset := "high"
+var settings_audio_device := "Default"
+var settings_master_volume := 80.0
+var settings_music_volume := 70.0
+var settings_effects_volume := 75.0
+var settings_interface_volume := 80.0
+
 var date_label: Label
 var status_label: Label
 var pause_button: Button
@@ -33,6 +48,7 @@ var log_label: RichTextLabel
 
 func _ready() -> void:
 	DisplayServer.window_set_title("Red Meridian")
+	_load_localization()
 	_load_countries()
 	_load_events()
 	if countries.is_empty():
@@ -41,13 +57,13 @@ func _ready() -> void:
 
 	selected_country_id = String(countries[0].get("id", ""))
 	player_country_id = selected_country_id
-	_build_layout()
-	_log("Red Meridian initialized. Local prototype ready for testing.")
-	_refresh_all()
+	_show_main_menu()
 	set_process(true)
 
 
 func _process(delta: float) -> void:
+	if current_screen != "game":
+		return
 	if paused:
 		return
 
@@ -65,6 +81,19 @@ func _load_events() -> void:
 	events = _load_json_array(EVENTS_DATA_PATH)
 
 
+func _load_localization() -> void:
+	var file := FileAccess.open(LOCALIZATION_DATA_PATH, FileAccess.READ)
+	if file == null:
+		push_error("Failed to open %s" % LOCALIZATION_DATA_PATH)
+		return
+
+	var parsed = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) == TYPE_DICTIONARY:
+		localization = parsed
+	else:
+		push_error("Invalid localization dictionary: %s" % LOCALIZATION_DATA_PATH)
+
+
 func _load_json_array(path: String) -> Array:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
@@ -77,6 +106,490 @@ func _load_json_array(path: String) -> Array:
 
 	push_error("Invalid JSON array: %s" % path)
 	return []
+
+
+func _text(key: String, replacements: Dictionary = {}) -> String:
+	var language_table: Dictionary = localization.get(current_language, {})
+	var fallback_table: Dictionary = localization.get("en", {})
+	var value := String(language_table.get(key, fallback_table.get(key, key)))
+	for replacement_key in replacements.keys():
+		value = value.replace("{%s}" % String(replacement_key), String(replacements[replacement_key]))
+	return value
+
+
+func _reset_scene() -> void:
+	for child in get_children():
+		remove_child(child)
+		child.queue_free()
+
+
+func _show_main_menu() -> void:
+	current_screen = "menu"
+	paused = true
+	_reset_scene()
+
+	var root := _build_menu_shell()
+	var center := HBoxContainer.new()
+	center.add_theme_constant_override("separation", 18)
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(center)
+
+	var menu_panel := _make_translucent_panel(360, 0)
+	center.add_child(menu_panel)
+
+	var menu_box := VBoxContainer.new()
+	menu_box.add_theme_constant_override("separation", 10)
+	menu_panel.add_child(menu_box)
+
+	menu_box.add_child(_menu_title("RED MERIDIAN", _text("menu.subtitle")))
+	menu_box.add_child(_menu_button(_text("menu.single_player"), _start_single_player))
+	menu_box.add_child(_menu_button(_text("menu.multiplayer"), _show_multiplayer_notice))
+	menu_box.add_child(_menu_button(_text("menu.settings"), _show_settings_screen))
+	menu_box.add_child(_menu_button(_text("menu.about"), _show_about_screen))
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 28)
+	menu_box.add_child(spacer)
+	menu_box.add_child(_menu_button(_text("menu.quit"), _quit_game))
+
+	var updates_panel := _make_translucent_panel(430, 0)
+	center.add_child(updates_panel)
+
+	var updates_box := VBoxContainer.new()
+	updates_box.add_theme_constant_override("separation", 10)
+	updates_panel.add_child(updates_box)
+	updates_box.add_child(_section_title(_text("menu.latest_updates")))
+	updates_box.add_child(_muted_label("- %s" % _text("menu.update_1")))
+	updates_box.add_child(_muted_label("- %s" % _text("menu.update_2")))
+	updates_box.add_child(_muted_label("- %s" % _text("menu.update_3")))
+
+	var fill := Control.new()
+	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.add_child(fill)
+
+	root.add_child(_footer_label())
+
+
+func _build_menu_shell() -> VBoxContainer:
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_add_menu_background()
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 44)
+	margin.add_theme_constant_override("margin_right", 44)
+	margin.add_theme_constant_override("margin_top", 36)
+	margin.add_theme_constant_override("margin_bottom", 28)
+	add_child(margin)
+
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 18)
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(root)
+
+	var top_spacer := Control.new()
+	top_spacer.custom_minimum_size = Vector2(0, 78)
+	root.add_child(top_spacer)
+
+	return root
+
+
+func _add_menu_background() -> void:
+	var image := Image.new()
+	var image_error := image.load(MENU_BACKGROUND_PATH)
+	if image_error == OK:
+		var texture := ImageTexture.create_from_image(image)
+		var background := TextureRect.new()
+		background.texture = texture
+		background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		background.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(background)
+	else:
+		var fallback := ColorRect.new()
+		fallback.color = Color.html("#06101E")
+		fallback.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(fallback)
+
+	var shade := ColorRect.new()
+	shade.color = Color(0.0, 0.0, 0.0, 0.30)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(shade)
+
+
+func _menu_title(title_text: String, subtitle_text: String) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+
+	var title := Label.new()
+	title.text = title_text
+	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	box.add_child(title)
+
+	var subtitle := Label.new()
+	subtitle.text = subtitle_text
+	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	subtitle.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.72))
+	box.add_child(subtitle)
+
+	return box
+
+
+func _menu_button(text: String, callback: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(0, 42)
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(callback)
+	return button
+
+
+func _footer_label() -> Label:
+	var footer := Label.new()
+	footer.text = "%s | Godot 4 | %s" % [_text("menu.version"), ProjectSettings.get_setting("application/config/name", "Red Meridian")]
+	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	footer.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.62))
+	return footer
+
+
+func _make_translucent_panel(width: int, height: int) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(width, height)
+	panel.add_theme_stylebox_override("panel", _style_box(Color(0.03, 0.05, 0.07, 0.84), Color(0.38, 0.46, 0.52, 0.74)))
+	return panel
+
+
+func _start_single_player() -> void:
+	current_screen = "game"
+	_reset_scene()
+	_build_layout()
+	if log_lines.is_empty():
+		_log(_text("log.ready"))
+	_refresh_all()
+
+
+func _show_multiplayer_notice() -> void:
+	_show_message_screen(_text("menu.multiplayer"), _text("menu.multiplayer_status"))
+
+
+func _show_message_screen(title_text: String, body_text: String) -> void:
+	current_screen = "message"
+	paused = true
+	_reset_scene()
+	var root := _build_menu_shell()
+	var panel := _make_translucent_panel(620, 0)
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+	box.add_child(_section_title(title_text))
+	box.add_child(_muted_label(body_text))
+	box.add_child(_menu_button(_text("common.back"), _show_main_menu))
+	root.add_child(_footer_label())
+
+
+func _show_about_screen() -> void:
+	current_screen = "about"
+	paused = true
+	_reset_scene()
+	var root := _build_menu_shell()
+	var panel := _make_translucent_panel(720, 0)
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+	box.add_child(_section_title(_text("about.title")))
+	box.add_child(_muted_label(_text("about.body")))
+	box.add_child(_section_title(_text("about.scope_title")))
+	box.add_child(_muted_label(_text("about.scope_body")))
+	box.add_child(_section_title(_text("menu.latest_updates")))
+	box.add_child(_muted_label("- %s" % _text("menu.update_1")))
+	box.add_child(_muted_label("- %s" % _text("menu.update_2")))
+	box.add_child(_muted_label("- %s" % _text("menu.update_3")))
+	box.add_child(_menu_button(_text("common.back"), _show_main_menu))
+	root.add_child(_footer_label())
+
+
+func _show_settings_screen() -> void:
+	current_screen = "settings"
+	paused = true
+	_reset_scene()
+	var root := _build_menu_shell()
+	var panel := _make_translucent_panel(820, 0)
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+	box.add_child(_section_title(_text("settings.title")))
+
+	var tabs := TabContainer.new()
+	tabs.custom_minimum_size = Vector2(0, 470)
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(tabs)
+
+	tabs.add_child(_settings_general_tab())
+	tabs.add_child(_settings_display_tab())
+	tabs.add_child(_settings_graphics_tab())
+	tabs.add_child(_settings_audio_tab())
+
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
+	box.add_child(actions)
+
+	var apply_button := _menu_button(_text("common.apply"), _apply_all_settings)
+	actions.add_child(apply_button)
+
+	var back_button := _menu_button(_text("common.back"), _show_main_menu)
+	actions.add_child(back_button)
+
+	root.add_child(_footer_label())
+
+
+func _settings_general_tab() -> Control:
+	var box := _settings_tab(_text("settings.general"))
+	box.add_child(_settings_label(_text("settings.language")))
+
+	var language_select := OptionButton.new()
+	language_select.add_item(_text("settings.language_en"))
+	language_select.set_item_metadata(0, "en")
+	language_select.add_item(_text("settings.language_pt"))
+	language_select.set_item_metadata(1, "pt_BR")
+	language_select.selected = 1 if current_language == "pt_BR" else 0
+	language_select.item_selected.connect(_on_language_selected.bind(language_select))
+	box.add_child(language_select)
+
+	return box
+
+
+func _settings_display_tab() -> Control:
+	var box := _settings_tab(_text("settings.display"))
+
+	box.add_child(_settings_label(_text("settings.window_mode")))
+	var mode_select := OptionButton.new()
+	var modes := [
+		["windowed", _text("settings.windowed")],
+		["borderless", _text("settings.borderless")],
+		["exclusive_fullscreen", _text("settings.exclusive_fullscreen")]
+	]
+	for i in range(modes.size()):
+		mode_select.add_item(String(modes[i][1]))
+		mode_select.set_item_metadata(i, String(modes[i][0]))
+		if String(modes[i][0]) == settings_window_mode:
+			mode_select.selected = i
+	mode_select.item_selected.connect(_on_window_mode_selected.bind(mode_select))
+	box.add_child(mode_select)
+
+	box.add_child(_settings_label(_text("settings.resolution")))
+	var resolution_select := OptionButton.new()
+	var resolutions := [Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3840, 2160)]
+	for i in range(resolutions.size()):
+		var resolution: Vector2i = resolutions[i]
+		resolution_select.add_item("%d x %d" % [resolution.x, resolution.y])
+		resolution_select.set_item_metadata(i, resolution)
+		if resolution == settings_resolution:
+			resolution_select.selected = i
+	resolution_select.item_selected.connect(_on_resolution_selected.bind(resolution_select))
+	box.add_child(resolution_select)
+
+	var vsync_check := CheckBox.new()
+	vsync_check.text = _text("settings.vsync")
+	vsync_check.button_pressed = settings_vsync
+	vsync_check.toggled.connect(_on_vsync_toggled)
+	box.add_child(vsync_check)
+
+	return box
+
+
+func _settings_graphics_tab() -> Control:
+	var box := _settings_tab(_text("settings.graphics"))
+
+	box.add_child(_settings_label(_text("settings.graphics_preset")))
+	var preset_select := OptionButton.new()
+	var presets := [
+		["low", _text("settings.low")],
+		["medium", _text("settings.medium")],
+		["high", _text("settings.high")],
+		["ultra", _text("settings.ultra")]
+	]
+	for i in range(presets.size()):
+		preset_select.add_item(String(presets[i][1]))
+		preset_select.set_item_metadata(i, String(presets[i][0]))
+		if String(presets[i][0]) == settings_graphics_preset:
+			preset_select.selected = i
+	preset_select.item_selected.connect(_on_graphics_preset_selected.bind(preset_select))
+	box.add_child(preset_select)
+
+	box.add_child(_settings_check("strategic_lighting", _text("settings.strategic_lighting"), true))
+	box.add_child(_settings_check("map_effects", _text("settings.map_effects"), true))
+	box.add_child(_settings_check("unit_shadows", _text("settings.unit_shadows"), settings_graphics_preset in ["high", "ultra"]))
+	box.add_child(_settings_check("post_processing", _text("settings.post_processing"), settings_graphics_preset in ["medium", "high", "ultra"]))
+	box.add_child(_settings_check("water_reflections", _text("settings.water_reflections"), settings_graphics_preset == "ultra"))
+
+	return box
+
+
+func _settings_audio_tab() -> Control:
+	var box := _settings_tab(_text("settings.audio"))
+
+	box.add_child(_settings_label(_text("settings.output_device")))
+	var device_select := OptionButton.new()
+	var devices := AudioServer.get_output_device_list()
+	if devices.is_empty():
+		devices = PackedStringArray(["Default"])
+	for i in range(devices.size()):
+		var device := String(devices[i])
+		device_select.add_item(device)
+		device_select.set_item_metadata(i, device)
+		if device == settings_audio_device:
+			device_select.selected = i
+	device_select.item_selected.connect(_on_audio_device_selected.bind(device_select))
+	box.add_child(device_select)
+
+	box.add_child(_volume_slider(_text("settings.master_volume"), settings_master_volume, _on_master_volume_changed))
+	box.add_child(_volume_slider(_text("settings.music_volume"), settings_music_volume, _on_music_volume_changed))
+	box.add_child(_volume_slider(_text("settings.effects_volume"), settings_effects_volume, _on_effects_volume_changed))
+	box.add_child(_volume_slider(_text("settings.interface_volume"), settings_interface_volume, _on_interface_volume_changed))
+
+	return box
+
+
+func _settings_tab(tab_name: String) -> VBoxContainer:
+	var box := VBoxContainer.new()
+	box.name = tab_name
+	box.add_theme_constant_override("separation", 10)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	return box
+
+
+func _settings_label(text: String) -> Label:
+	var label := _muted_label(text)
+	label.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.82))
+	return label
+
+
+func _settings_check(setting_id: String, text: String, enabled: bool) -> CheckBox:
+	var check := CheckBox.new()
+	check.text = text
+	check.button_pressed = enabled
+	check.set_meta("setting_id", setting_id)
+	return check
+
+
+func _volume_slider(label_text: String, value: float, callback: Callable) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	var label := _settings_label("%s: %.0f%%" % [label_text, value])
+	box.add_child(label)
+
+	var slider := HSlider.new()
+	slider.min_value = 0
+	slider.max_value = 100
+	slider.step = 1
+	slider.value = value
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.value_changed.connect(callback)
+	slider.value_changed.connect(func(new_value: float) -> void:
+		label.text = "%s: %.0f%%" % [label_text, new_value]
+	)
+	box.add_child(slider)
+	return box
+
+
+func _on_language_selected(index: int, select: OptionButton) -> void:
+	current_language = String(select.get_item_metadata(index))
+	_show_settings_screen()
+
+
+func _on_window_mode_selected(index: int, select: OptionButton) -> void:
+	settings_window_mode = String(select.get_item_metadata(index))
+
+
+func _on_resolution_selected(index: int, select: OptionButton) -> void:
+	settings_resolution = select.get_item_metadata(index)
+
+
+func _on_vsync_toggled(value: bool) -> void:
+	settings_vsync = value
+
+
+func _on_graphics_preset_selected(index: int, select: OptionButton) -> void:
+	settings_graphics_preset = String(select.get_item_metadata(index))
+	_show_settings_screen()
+
+
+func _on_audio_device_selected(index: int, select: OptionButton) -> void:
+	settings_audio_device = String(select.get_item_metadata(index))
+
+
+func _on_master_volume_changed(value: float) -> void:
+	settings_master_volume = value
+	_set_bus_volume("Master", value)
+
+
+func _on_music_volume_changed(value: float) -> void:
+	settings_music_volume = value
+	_set_bus_volume("Music", value)
+
+
+func _on_effects_volume_changed(value: float) -> void:
+	settings_effects_volume = value
+	_set_bus_volume("Effects", value)
+
+
+func _on_interface_volume_changed(value: float) -> void:
+	settings_interface_volume = value
+	_set_bus_volume("Interface", value)
+
+
+func _apply_all_settings() -> void:
+	_apply_display_settings()
+	_apply_audio_settings()
+	_show_message_screen(_text("settings.title"), _text("settings.applied"))
+
+
+func _apply_display_settings() -> void:
+	match settings_window_mode:
+		"windowed":
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			DisplayServer.window_set_size(settings_resolution)
+		"borderless":
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		"exclusive_fullscreen":
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if settings_vsync else DisplayServer.VSYNC_DISABLED)
+
+
+func _apply_audio_settings() -> void:
+	if settings_audio_device != "":
+		AudioServer.output_device = settings_audio_device
+	_set_bus_volume("Master", settings_master_volume)
+	_set_bus_volume("Music", settings_music_volume)
+	_set_bus_volume("Effects", settings_effects_volume)
+	_set_bus_volume("Interface", settings_interface_volume)
+
+
+func _set_bus_volume(bus_name: String, value: float) -> void:
+	var bus_index := AudioServer.get_bus_index(bus_name)
+	if bus_index == -1:
+		AudioServer.add_bus()
+		bus_index = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(bus_index, bus_name)
+	var linear_value := clampf(value / 100.0, 0.0, 1.0)
+	AudioServer.set_bus_volume_db(bus_index, linear_to_db(linear_value) if linear_value > 0.0 else -80.0)
+
+
+func _quit_game() -> void:
+	get_tree().quit()
+
 
 func _build_layout() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -183,7 +696,7 @@ func _build_top_bar() -> Control:
 	title_box.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.text = "2D geopolitical and military simulator"
+	subtitle.text = _text("game.subtitle")
 	subtitle.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.62))
 	title_box.add_child(subtitle)
 
@@ -216,7 +729,7 @@ func _build_top_bar() -> Control:
 	bar.add_child(pause_button)
 
 	var day_button := Button.new()
-	day_button.text = "+1 day"
+	day_button.text = _text("game.one_day")
 	day_button.custom_minimum_size = Vector2(80, 34)
 	day_button.pressed.connect(_advance_day)
 	bar.add_child(day_button)
@@ -241,8 +754,8 @@ func _refresh_all() -> void:
 
 func _refresh_top_bar() -> void:
 	date_label.text = "%02d/%02d/%04d" % [current_day, current_month, current_year]
-	status_label.text = "Paused" if paused else "Running %sx" % speed
-	pause_button.text = "Resume" if paused else "Pause"
+	status_label.text = _text("game.paused") if paused else _text("game.running", {"speed": speed})
+	pause_button.text = _text("game.resume") if paused else _text("game.pause")
 	tension_bar.value = global_tension
 
 
@@ -251,6 +764,12 @@ func _refresh_map() -> void:
 	map_canvas.set_selected_country(selected_country_id)
 	map_canvas.set_player_country(player_country_id)
 	map_canvas.set_global_tension(global_tension)
+	map_canvas.set_labels(
+		_text("game.global_tension", {"value": "%.0f%%"}),
+		_text("game.map_hint"),
+		_text("game.stability"),
+		_text("game.readiness")
+	)
 
 
 func _refresh_country_panel() -> void:
@@ -265,23 +784,26 @@ func _refresh_country_panel() -> void:
 		String(country.get("bloc", "")),
 		String(country.get("capital", ""))
 	]))
-	country_panel.add_child(_muted_label("Leader: %s" % String(country.get("leader", "Pending"))))
-	country_panel.add_child(_muted_label("Player country: %s" % ("Yes" if String(country.get("id", "")) == player_country_id else "No")))
+	country_panel.add_child(_muted_label("%s: %s" % [_text("game.leader"), String(country.get("leader", _text("game.pending")))]))
+	country_panel.add_child(_muted_label("%s: %s" % [
+		_text("game.player_country"),
+		_text("game.yes") if String(country.get("id", "")) == player_country_id else _text("game.no")
+	]))
 
 	var stats: Dictionary = country.get("stats", {})
 	country_panel.add_child(_stat_row("GDP", "$%.2fT" % (float(stats.get("gdp", 0.0)) / 1000.0)))
-	country_panel.add_child(_progress_row("Stability", float(stats.get("stability", 0.0)), Color.html("#79D0FF")))
-	country_panel.add_child(_progress_row("Military power", float(stats.get("military", 0.0)), Color.html("#D95F5F")))
-	country_panel.add_child(_progress_row("Readiness", float(stats.get("readiness", 0.0)), Color.html("#F4D35E")))
-	country_panel.add_child(_progress_row("Diplomacy", float(stats.get("diplomacy", 0.0)), Color.html("#80CFA9")))
-	country_panel.add_child(_progress_row("Local tension", float(stats.get("tension", 0.0)), Color.html("#D18CE0")))
+	country_panel.add_child(_progress_row(_text("game.stability"), float(stats.get("stability", 0.0)), Color.html("#79D0FF")))
+	country_panel.add_child(_progress_row(_text("game.military_power"), float(stats.get("military", 0.0)), Color.html("#D95F5F")))
+	country_panel.add_child(_progress_row(_text("game.readiness"), float(stats.get("readiness", 0.0)), Color.html("#F4D35E")))
+	country_panel.add_child(_progress_row(_text("game.diplomacy"), float(stats.get("diplomacy", 0.0)), Color.html("#80CFA9")))
+	country_panel.add_child(_progress_row(_text("game.local_tension"), float(stats.get("tension", 0.0)), Color.html("#D18CE0")))
 
-	country_panel.add_child(_section_title("Government Actions"))
-	country_panel.add_child(_decision_button("Set as player country", "set_player"))
-	country_panel.add_child(_decision_button("Economic package", "economy"))
-	country_panel.add_child(_decision_button("Defense investment", "defense"))
-	country_panel.add_child(_decision_button("Diplomatic pressure", "pressure"))
-	country_panel.add_child(_decision_button("De-escalate tensions", "deescalate"))
+	country_panel.add_child(_section_title(_text("game.government_actions")))
+	country_panel.add_child(_decision_button(_text("game.set_player"), "set_player"))
+	country_panel.add_child(_decision_button(_text("game.economic_package"), "economy"))
+	country_panel.add_child(_decision_button(_text("game.defense_investment"), "defense"))
+	country_panel.add_child(_decision_button(_text("game.diplomatic_pressure"), "pressure"))
+	country_panel.add_child(_decision_button(_text("game.deescalate"), "deescalate"))
 
 
 func _refresh_focus_panel() -> void:
@@ -290,16 +812,19 @@ func _refresh_focus_panel() -> void:
 	if country.is_empty():
 		return
 
-	focus_panel.add_child(_section_title("National Focus"))
-	focus_panel.add_child(_muted_label("First version: each country has national focuses with duration and effects. Later this becomes a full visual branching tree."))
+	focus_panel.add_child(_section_title(_text("game.national_focus")))
+	focus_panel.add_child(_muted_label(_text("game.focus_help")))
 
 	var country_id := String(country.get("id", ""))
 	if active_focuses.has(country_id):
 		var active: Dictionary = active_focuses[country_id]
 		var focus: Dictionary = active.get("focus", {})
 		focus_panel.add_child(_status_card(
-			"Active focus",
-			"%s\n%d days remaining" % [String(focus.get("title", "")), int(active.get("remaining", 0))]
+			_text("game.active_focus"),
+			"%s\n%s" % [
+				String(focus.get("title", "")),
+				_text("game.days_remaining", {"days": int(active.get("remaining", 0))})
+			]
 		))
 
 	var focuses: Array = country.get("focuses", [])
@@ -320,7 +845,7 @@ func _select_country(country_id: String) -> void:
 	selected_country_id = country_id
 	var country := _selected_country()
 	if not country.is_empty():
-		_log("Selected country: %s" % String(country.get("name", country_id)))
+		_log(_text("log.selected_country", {"country": String(country.get("name", country_id))}))
 	_refresh_all()
 
 
@@ -332,7 +857,7 @@ func _toggle_pause() -> void:
 func _set_speed(value: int) -> void:
 	speed = value
 	paused = false
-	_log("Speed set to %sx." % speed)
+	_log(_text("log.speed", {"speed": speed}))
 	_refresh_all()
 
 
@@ -414,10 +939,10 @@ func _apply_strategic_event(event: Dictionary) -> void:
 		_clamp_stats(stats)
 		country["stats"] = stats
 
-	_log("Strategic event: %s - %s" % [
-		String(event.get("title", "Untitled event")),
-		String(event.get("description", ""))
-	])
+	_log(_text("log.event", {
+		"title": String(event.get("title", "Untitled event")),
+		"description": String(event.get("description", ""))
+	}))
 
 
 func _process_focuses() -> void:
@@ -434,7 +959,10 @@ func _process_focuses() -> void:
 		var focus: Dictionary = active.get("focus", {})
 		_apply_focus_effects(country_id, focus)
 		active_focuses.erase(country_id)
-		_log("Focus completed: %s (%s)." % [String(focus.get("title", "")), country_id])
+		_log(_text("log.focus_completed", {
+			"focus": String(focus.get("title", "")),
+			"country": country_id
+		}))
 
 
 func _apply_focus_effects(country_id: String, focus: Dictionary) -> void:
@@ -457,14 +985,17 @@ func _apply_focus_effects(country_id: String, focus: Dictionary) -> void:
 
 func _start_focus(country_id: String, focus: Dictionary) -> void:
 	if active_focuses.has(country_id):
-		_log("This country already has an active focus.")
+		_log(_text("log.focus_active"))
 		return
 
 	active_focuses[country_id] = {
 		"focus": focus,
 		"remaining": int(focus.get("duration_days", 30))
 	}
-	_log("Focus started: %s (%s)." % [String(focus.get("title", "")), country_id])
+	_log(_text("log.focus_started", {
+		"focus": String(focus.get("title", "")),
+		"country": country_id
+	}))
 	_refresh_all()
 
 
@@ -479,27 +1010,27 @@ func _run_decision(decision_id: String) -> void:
 	match decision_id:
 		"set_player":
 			player_country_id = String(country.get("id", ""))
-			_log("%s is now the player country." % country_name)
+			_log(_text("log.player_country", {"country": country_name}))
 		"economy":
 			stats["gdp"] = float(stats.get("gdp", 0.0)) + 25.0
 			stats["stability"] = float(stats.get("stability", 0.0)) + 1.0
-			_log("%s approved an economic package." % country_name)
+			_log(_text("log.economy", {"country": country_name}))
 		"defense":
 			stats["military"] = float(stats.get("military", 0.0)) + 1.5
 			stats["readiness"] = float(stats.get("readiness", 0.0)) + 2.0
 			stats["stability"] = float(stats.get("stability", 0.0)) - 0.5
 			global_tension = clampf(global_tension + 0.6, 0.0, 100.0)
-			_log("%s increased defense investment." % country_name)
+			_log(_text("log.defense", {"country": country_name}))
 		"pressure":
 			stats["diplomacy"] = float(stats.get("diplomacy", 0.0)) + 1.0
 			stats["tension"] = float(stats.get("tension", 0.0)) + 2.0
 			global_tension = clampf(global_tension + 0.8, 0.0, 100.0)
-			_log("%s applied diplomatic pressure." % country_name)
+			_log(_text("log.pressure", {"country": country_name}))
 		"deescalate":
 			stats["diplomacy"] = float(stats.get("diplomacy", 0.0)) + 1.5
 			stats["tension"] = float(stats.get("tension", 0.0)) - 2.5
 			global_tension = clampf(global_tension - 0.5, 0.0, 100.0)
-			_log("%s moved to de-escalate tensions." % country_name)
+			_log(_text("log.deescalate", {"country": country_name}))
 
 	_clamp_stats(stats)
 	country["stats"] = stats
@@ -639,13 +1170,13 @@ func _focus_card(country_id: String, focus: Dictionary) -> Control:
 	box.add_theme_constant_override("separation", 7)
 	panel.add_child(box)
 
-	box.add_child(_section_title(String(focus.get("title", "Focus"))))
+	box.add_child(_section_title(String(focus.get("title", _text("game.focus")))))
 	box.add_child(_muted_label(String(focus.get("description", ""))))
-	box.add_child(_muted_label("Duration: %d days" % int(focus.get("duration_days", 30))))
-	box.add_child(_muted_label("Effects: %s" % _format_effects(focus.get("effects", {}))))
+	box.add_child(_muted_label(_text("game.duration_days", {"days": int(focus.get("duration_days", 30))})))
+	box.add_child(_muted_label(_text("game.effects", {"effects": _format_effects(focus.get("effects", {}))})))
 
 	var button := Button.new()
-	button.text = "Start focus"
+	button.text = _text("game.start_focus")
 	button.disabled = active_focuses.has(country_id)
 	button.pressed.connect(_start_focus.bind(country_id, focus))
 	box.add_child(button)

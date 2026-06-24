@@ -7,6 +7,10 @@ var selected_country_id := ""
 var player_country_id := ""
 var hovered_country_id := ""
 var global_tension := 0.0
+var global_tension_label := "Global tension %.0f%%"
+var map_hint_label := "Abstract strategic map - click a country"
+var stability_label := "Stability"
+var readiness_label := "Readiness"
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -30,6 +34,14 @@ func set_player_country(country_id: String) -> void:
 
 func set_global_tension(value: float) -> void:
 	global_tension = value
+	queue_redraw()
+
+
+func set_labels(tension_format: String, map_hint: String, stability_text: String, readiness_text: String) -> void:
+	global_tension_label = tension_format
+	map_hint_label = map_hint
+	stability_label = stability_text
+	readiness_label = readiness_text
 	queue_redraw()
 
 
@@ -154,9 +166,9 @@ func _draw_countries() -> void:
 
 func _draw_overlay() -> void:
 	var font := get_theme_default_font()
-	var tension_text := "Global tension %.0f%%" % clampf(global_tension, 0.0, 100.0)
+	var tension_text := global_tension_label % clampf(global_tension, 0.0, 100.0)
 	draw_string(font, Vector2(18, 28), tension_text, HORIZONTAL_ALIGNMENT_LEFT, 280.0, 16, Color.html("#E8EEF8"))
-	draw_string(font, Vector2(18, size.y - 22), "Abstract strategic map - click a country", HORIZONTAL_ALIGNMENT_LEFT, 420.0, 13, Color(0.86, 0.91, 0.98, 0.66))
+	draw_string(font, Vector2(18, size.y - 22), map_hint_label, HORIZONTAL_ALIGNMENT_LEFT, 420.0, 13, Color(0.86, 0.91, 0.98, 0.66))
 
 
 func _country_at(point: Vector2) -> String:
@@ -174,10 +186,12 @@ func _tooltip_for(country_id: String) -> String:
 	for country in countries:
 		if String(country.get("id", "")) == country_id:
 			var stats: Dictionary = country.get("stats", {})
-			return "%s\nGDP: %.1fT\nStability: %.0f%%\nReadiness: %.0f%%" % [
+			return "%s\nGDP: %.1fT\n%s: %.0f%%\n%s: %.0f%%" % [
 				String(country.get("name", country_id)),
 				float(stats.get("gdp", 0.0)) / 1000.0,
+				stability_label,
 				float(stats.get("stability", 0.0)),
+				readiness_label,
 				float(stats.get("readiness", 0.0))
 			]
 	return ""

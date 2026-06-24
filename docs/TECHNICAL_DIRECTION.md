@@ -17,11 +17,12 @@ docs/                Planning and documentation
 scenes/              Godot scenes
 scripts/             GDScript and utility scripts
 scripts/launch/      Windows launcher
+scripts/tests/       Godot smoke tests
 ```
 
 ## Data
 
-Gameplay content should live outside scripts whenever practical. `data/countries.json` and `data/events.json` are the first examples of this direction.
+Gameplay content should live outside scripts whenever practical. `data/countries.json`, `data/events.json`, and `data/localization.json` are the first examples of this direction.
 
 Guidelines:
 
