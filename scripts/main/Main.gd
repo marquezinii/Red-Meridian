@@ -40,6 +40,10 @@ var settings_cursor_confined := true
 var settings_pause_on_focus_loss := true
 var settings_tutorial_hints := true
 var settings_confirm_major_actions := true
+var settings_show_tooltips := true
+var settings_edge_scrolling := true
+var settings_camera_pan_speed := "normal"
+var settings_auto_pause_events := true
 var settings_autosave_interval := 10
 var settings_measurement_system := "metric"
 var settings_graphics_preset := "high"
@@ -103,9 +107,21 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and settings_pause_on_focus_loss and current_screen == "game":
-		paused = true
-		_refresh_top_bar()
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		if settings_mute_when_unfocused:
+			var master_bus := AudioServer.get_bus_index("Master")
+			if master_bus != -1:
+				AudioServer.set_bus_mute(master_bus, true)
+		if settings_pause_on_focus_loss and current_screen == "game":
+			paused = true
+			_refresh_top_bar()
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		if settings_mute_when_unfocused:
+			var master_bus := AudioServer.get_bus_index("Master")
+			if master_bus != -1:
+				AudioServer.set_bus_mute(master_bus, false)
+		_apply_cursor_mode()
 
 
 func _process(delta: float) -> void:
@@ -423,10 +439,10 @@ func _show_settings_screen(active_tab: int = -1) -> void:
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(tabs)
 
-	tabs.add_child(_settings_general_tab())
-	tabs.add_child(_settings_display_tab())
-	tabs.add_child(_settings_graphics_tab())
-	tabs.add_child(_settings_audio_tab())
+	tabs.add_child(_wrap_settings_tab(_settings_general_tab()))
+	tabs.add_child(_wrap_settings_tab(_settings_display_tab()))
+	tabs.add_child(_wrap_settings_tab(_settings_graphics_tab()))
+	tabs.add_child(_wrap_settings_tab(_settings_audio_tab()))
 	tabs.current_tab = clampi(settings_active_tab, 0, tabs.get_tab_count() - 1)
 	tabs.tab_changed.connect(func(tab: int) -> void:
 		settings_active_tab = tab
@@ -487,6 +503,23 @@ func _settings_general_tab() -> Control:
 	box.add_child(_settings_checkbox(_text("settings.tutorial_hints"), settings_tutorial_hints, _on_tutorial_hints_toggled))
 	box.add_child(_settings_checkbox(_text("settings.pause_on_focus_loss"), settings_pause_on_focus_loss, _on_pause_on_focus_loss_toggled))
 	box.add_child(_settings_checkbox(_text("settings.confirm_major_actions"), settings_confirm_major_actions, _on_confirm_major_actions_toggled))
+	box.add_child(_settings_checkbox(_text("settings.show_tooltips"), settings_show_tooltips, _on_show_tooltips_toggled))
+	box.add_child(_settings_checkbox(_text("settings.edge_scrolling"), settings_edge_scrolling, _on_edge_scrolling_toggled))
+	box.add_child(_settings_checkbox(_text("settings.auto_pause_events"), settings_auto_pause_events, _on_auto_pause_events_toggled))
+
+	box.add_child(_settings_label(_text("settings.camera_pan_speed")))
+	var camera_speed_select := _settings_option_button()
+	var speeds := [
+		["slow", _text("settings.camera_speed_slow")],
+		["normal", _text("settings.camera_speed_normal")],
+		["fast", _text("settings.camera_speed_fast")]
+	]
+	for i in range(speeds.size()):
+		camera_speed_select.add_item(String(speeds[i][1]))
+		camera_speed_select.set_item_metadata(i, String(speeds[i][0]))
+	_select_option_by_metadata(camera_speed_select, settings_camera_pan_speed)
+	camera_speed_select.item_selected.connect(_on_camera_pan_speed_selected.bind(camera_speed_select))
+	box.add_child(camera_speed_select)
 
 	return box
 
@@ -500,6 +533,7 @@ func _settings_display_tab() -> Control:
 		var screen_size := DisplayServer.screen_get_size(screen)
 		monitor_select.add_item(_text("settings.monitor_label", {
 			"number": screen + 1,
+			"name": _screen_name_for(screen),
 			"width": screen_size.x,
 			"height": screen_size.y
 		}))
@@ -679,8 +713,20 @@ func _settings_tab(tab_name: String) -> VBoxContainer:
 	box.name = tab_name
 	box.add_theme_constant_override("separation", 10)
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	return box
+
+
+func _wrap_settings_tab(content: VBoxContainer) -> ScrollContainer:
+	var scroll := ScrollContainer.new()
+	scroll.name = content.name
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(content)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return scroll
 
 
 func _settings_label(text: String) -> Label:
@@ -742,22 +788,28 @@ func _graphics_check(setting_id: String, text: String, preset_select: OptionButt
 	return check
 
 
+func _volume_label_text(label_text: String, value: float) -> String:
+	return "%s: %.0f%%" % [label_text, clampf(value, 0.0, 100.0)]
+
+
 func _volume_slider(setting_id: String, label_text: String, value: float, callback: Callable, max_value: float) -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
-	var label := _settings_label("%s: %.0f%%" % [label_text, value])
+	var initial_cap := 100.0 if setting_id == "master" else max_value
+	var label := _settings_label(_volume_label_text(label_text, clampf(value, 0.0, initial_cap)))
 	box.add_child(label)
 
 	var slider := HSlider.new()
 	slider.min_value = 0
-	slider.max_value = max_value
+	slider.max_value = 100
 	slider.step = 1
-	slider.value = clampf(value, 0.0, max_value)
+	slider.value = clampf(value, 0.0, initial_cap)
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slider.value_changed.connect(callback)
 	slider.value_changed.connect(func(new_value: float) -> void:
-		label.text = "%s: %.0f%%" % [label_text, new_value]
+		var active_cap := 100.0 if setting_id == "master" else settings_master_volume
+		label.text = _volume_label_text(label_text, clampf(new_value, 0.0, active_cap))
 	)
+	slider.value_changed.connect(callback)
 	box.add_child(slider)
 	if setting_id != "master":
 		audio_sub_sliders[setting_id] = slider
@@ -793,6 +845,22 @@ func _on_confirm_major_actions_toggled(value: bool) -> void:
 	settings_confirm_major_actions = value
 
 
+func _on_show_tooltips_toggled(value: bool) -> void:
+	settings_show_tooltips = value
+
+
+func _on_edge_scrolling_toggled(value: bool) -> void:
+	settings_edge_scrolling = value
+
+
+func _on_auto_pause_events_toggled(value: bool) -> void:
+	settings_auto_pause_events = value
+
+
+func _on_camera_pan_speed_selected(index: int, select: OptionButton) -> void:
+	settings_camera_pan_speed = String(select.get_item_metadata(index))
+
+
 func _on_monitor_selected(index: int, select: OptionButton) -> void:
 	settings_monitor = int(select.get_item_metadata(index))
 	settings_resolution = _screen_size_for(settings_monitor)
@@ -824,6 +892,7 @@ func _on_vsync_toggled(value: bool) -> void:
 
 func _on_cursor_confined_toggled(value: bool) -> void:
 	settings_cursor_confined = value
+	_apply_cursor_mode()
 
 
 func _on_graphics_preset_selected(index: int, select: OptionButton) -> void:
@@ -847,24 +916,27 @@ func _on_audio_device_selected(index: int, select: OptionButton) -> void:
 
 
 func _on_master_volume_changed(value: float) -> void:
-	settings_master_volume = value
+	settings_master_volume = clampf(value, 0.0, 100.0)
 	_clamp_audio_to_master()
 	_refresh_audio_slider_limits()
 	_apply_audio_settings()
 
 
 func _on_music_volume_changed(value: float) -> void:
-	settings_music_volume = minf(value, settings_master_volume)
+	settings_music_volume = clampf(value, 0.0, settings_master_volume)
+	_sync_audio_sub_slider("music", settings_music_volume)
 	_apply_audio_settings()
 
 
 func _on_effects_volume_changed(value: float) -> void:
-	settings_effects_volume = minf(value, settings_master_volume)
+	settings_effects_volume = clampf(value, 0.0, settings_master_volume)
+	_sync_audio_sub_slider("effects", settings_effects_volume)
 	_apply_audio_settings()
 
 
 func _on_interface_volume_changed(value: float) -> void:
-	settings_interface_volume = minf(value, settings_master_volume)
+	settings_interface_volume = clampf(value, 0.0, settings_master_volume)
+	_sync_audio_sub_slider("interface", settings_interface_volume)
 	_apply_audio_settings()
 
 
@@ -909,7 +981,14 @@ func _apply_display_settings() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if settings_vsync else DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = settings_frame_rate_cap
 	get_window().content_scale_factor = float(settings_ui_scale) / 100.0
-	Input.mouse_mode = Input.MOUSE_MODE_CONFINED if settings_cursor_confined and settings_window_mode != "windowed" else Input.MOUSE_MODE_VISIBLE
+	_apply_cursor_mode()
+
+
+func _apply_cursor_mode() -> void:
+	if settings_cursor_confined and settings_window_mode != "windowed":
+		Input.mouse_mode = Input.MOUSE_MODE_CONFINED
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 func _apply_audio_settings() -> void:
@@ -953,14 +1032,39 @@ func _screen_size_for(screen: int) -> Vector2i:
 	return size
 
 
+func _screen_name_for(screen: int) -> String:
+	if DisplayServer.has_method("screen_get_name"):
+		var detected_name = DisplayServer.call("screen_get_name", screen)
+		if typeof(detected_name) == TYPE_STRING:
+			var clean_name := String(detected_name).strip_edges()
+			if not clean_name.is_empty():
+				return clean_name
+
+	var primary_screen := 0
+	if DisplayServer.has_method("get_primary_screen"):
+		primary_screen = int(DisplayServer.call("get_primary_screen"))
+	if screen == primary_screen:
+		return _text("settings.primary_monitor")
+	return _text("settings.display_number", {"number": screen + 1})
+
+
 func _available_resolutions() -> Array[Vector2i]:
 	var native := _screen_size_for(settings_monitor)
 	var resolutions: Array[Vector2i] = [
+		Vector2i(1024, 576),
+		Vector2i(1152, 648),
 		Vector2i(1280, 720),
+		Vector2i(1366, 768),
+		Vector2i(1440, 900),
 		Vector2i(1600, 900),
 		Vector2i(1920, 1080),
+		Vector2i(2048, 1152),
+		Vector2i(2560, 1080),
 		Vector2i(2560, 1440),
+		Vector2i(2880, 1620),
 		Vector2i(3200, 1800),
+		Vector2i(3440, 1440),
+		Vector2i(3840, 1600),
 		Vector2i(3840, 2160)
 	]
 	if not resolutions.has(native):
@@ -1077,13 +1181,21 @@ func _refresh_audio_slider_limits() -> void:
 		"interface": settings_interface_volume
 	}
 	for key in audio_sub_sliders.keys():
-		var slider: HSlider = audio_sub_sliders[key]
-		slider.max_value = settings_master_volume
-		slider.value = clampf(float(values.get(key, 0.0)), 0.0, settings_master_volume)
-		var label_data: Dictionary = audio_sub_labels.get(key, {})
-		var label: Label = label_data.get("label")
-		if label:
-			label.text = "%s: %.0f%%" % [String(label_data.get("text", "")), slider.value]
+		_sync_audio_sub_slider(String(key), float(values.get(key, 0.0)))
+
+
+func _sync_audio_sub_slider(setting_id: String, value: float) -> void:
+	var slider = audio_sub_sliders.get(setting_id)
+	if slider is HSlider:
+		slider.max_value = 100
+		var clamped_value := clampf(value, 0.0, settings_master_volume)
+		if not is_equal_approx(slider.value, clamped_value):
+			slider.value = clamped_value
+
+	var label_data: Dictionary = audio_sub_labels.get(setting_id, {})
+	var label = label_data.get("label")
+	if label is Label:
+		label.text = _volume_label_text(String(label_data.get("text", "")), clampf(value, 0.0, settings_master_volume))
 
 
 func _quit_game() -> void:

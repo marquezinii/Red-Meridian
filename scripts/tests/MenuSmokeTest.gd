@@ -34,12 +34,24 @@ func _process(_delta: float) -> bool:
 				quit(1)
 				return false
 		6:
+			main_scene._show_settings_screen(3)
+			main_scene.settings_master_volume = 100.0
 			main_scene.settings_music_volume = 90.0
 			main_scene.settings_effects_volume = 85.0
 			main_scene.settings_interface_volume = 80.0
 			main_scene._on_master_volume_changed(60.0)
 			if main_scene.settings_music_volume > 60.0 or main_scene.settings_effects_volume > 60.0 or main_scene.settings_interface_volume > 60.0:
 				push_error("Master volume did not clamp sub-volume settings.")
+				quit(1)
+				return false
+			var music_slider: HSlider = main_scene.audio_sub_sliders.get("music")
+			if music_slider == null or music_slider.max_value != 100.0 or not is_equal_approx(music_slider.value, 60.0):
+				push_error("Music slider did not stay on a 0-100 scale while matching the master cap.")
+				quit(1)
+				return false
+			main_scene._on_music_volume_changed(80.0)
+			if not is_equal_approx(main_scene.settings_music_volume, 60.0) or not is_equal_approx(music_slider.value, 60.0):
+				push_error("Music volume was allowed above the master volume cap.")
 				quit(1)
 				return false
 		8:
