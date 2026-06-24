@@ -1,58 +1,60 @@
 # Roadmap
 
-Este roadmap e incremental. A prioridade e sempre manter uma versao abrivel e testavel.
+This roadmap is incremental. The project should remain openable and testable after every step.
 
-## Fase 0 - Fundacao
+## Phase 0 - Foundation
 
-- [x] Criar projeto Godot 4.
-- [x] Criar cena principal.
-- [x] Criar launcher local para Windows.
-- [x] Criar dados iniciais de paises em JSON.
-- [x] Criar mapa estrategico abstrato.
-- [x] Criar acoes de governo e focos nacionais simples.
-- [ ] Confirmar caminho do Godot no PC de desenvolvimento.
-- [ ] Testar abertura real pelo Godot.
-- [ ] Criar primeiro commit remoto no GitHub.
+- [x] Create the Godot 4 project.
+- [x] Create the main scene.
+- [x] Create a local Windows launcher.
+- [x] Add initial country data in JSON.
+- [x] Add an abstract strategic map.
+- [x] Add government actions and simple national focuses.
+- [x] Publish the repository to GitHub.
+- [x] Confirm GitHub CLI access.
+- [x] Install and locate Godot on the development machine.
+- [x] Add the first strategic event model.
+- [ ] Test the desktop shortcut after launcher changes.
 
-## Fase 1 - Loop jogavel minimo
+## Phase 1 - Minimum Playable Loop
 
-- [ ] Escolha de pais ao iniciar campanha.
-- [ ] Salvamento e carregamento local.
-- [ ] Eventos geopoliticos simples.
-- [ ] Sistema basico de relacoes entre paises.
-- [ ] Tela de detalhes por pais.
-- [ ] Historico de eventos filtravel.
+- [x] Select a player country during runtime.
+- [ ] Add a campaign start screen.
+- [ ] Add local save and load.
+- [ ] Add simple geopolitical events.
+- [ ] Add basic country-to-country relations.
+- [ ] Add a detailed country screen.
+- [ ] Add a filterable event history.
 
-## Fase 2 - Mapa e dados
+## Phase 2 - Map and Data
 
-- [ ] Definir formato do mapa-mundi 2D.
-- [ ] Integrar paises com coordenadas e regioes reais.
-- [ ] Criar pipeline para importar dados auditados.
-- [ ] Separar dados factuais, dados de gameplay e conteudo gerado.
-- [ ] Adicionar validadores de dados.
+- [ ] Define the real 2D world map format.
+- [ ] Connect countries to real regions and coordinates.
+- [ ] Create an audited data import pipeline.
+- [ ] Separate factual data, gameplay data, and generated content.
+- [ ] Add automated data validators.
 
-## Fase 3 - Governo, economia e diplomacia
+## Phase 3 - Government, Economy, and Diplomacy
 
-- [ ] Sistema de estabilidade interna.
-- [ ] Orcamento e setores economicos.
-- [ ] Comercio, sancoes e dependencia estrategica.
-- [ ] Aliancas, pactos, tratados e pressoes diplomaticas.
-- [ ] Arvores de foco visuais e ramificadas.
+- [ ] Add internal stability systems.
+- [ ] Add budget and economic sectors.
+- [ ] Add trade, sanctions, and strategic dependencies.
+- [ ] Add alliances, pacts, treaties, and diplomatic pressure.
+- [ ] Add visual branching national focus trees.
 
-## Fase 4 - Sistema militar moderno
+## Phase 4 - Modern Military System
 
-- [ ] Forcas por ramo militar.
-- [ ] Prontidao, treinamento, manutencao e logistica.
-- [ ] Sensores, inteligencia e vigilancia.
-- [ ] Doutrinas e postura operacional.
-- [ ] Crises, escalada e conflitos limitados.
+- [ ] Add military branches.
+- [ ] Add readiness, training, maintenance, and logistics.
+- [ ] Add sensors, intelligence, and surveillance.
+- [ ] Add doctrines and operational posture.
+- [ ] Add crises, escalation, and limited conflicts.
 
-## Fase 5 - Polimento e publicacao futura
+## Phase 5 - Polish and Future Release Work
 
-- [ ] UI final.
-- [ ] Tutorial.
-- [ ] Localizacao.
-- [ ] Build exportavel.
-- [ ] Testes automatizados de dados e scripts.
-- [ ] Revisao juridica/licencas para dados reais, imagens e nomes.
-
+- [ ] Finalize UI direction.
+- [ ] Add tutorial flow.
+- [ ] Add localization support.
+- [ ] Create exportable builds.
+- [ ] Add automated tests for data and scripts.
+- [ ] Review legal/licensing requirements for real-world data, portraits, names, and media.

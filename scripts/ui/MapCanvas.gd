@@ -4,6 +4,7 @@ signal country_selected(country_id: String)
 
 var countries: Array = []
 var selected_country_id := ""
+var player_country_id := ""
 var hovered_country_id := ""
 var global_tension := 0.0
 
@@ -19,6 +20,11 @@ func set_countries(value: Array) -> void:
 
 func set_selected_country(country_id: String) -> void:
 	selected_country_id = country_id
+	queue_redraw()
+
+
+func set_player_country(country_id: String) -> void:
+	player_country_id = country_id
 	queue_redraw()
 
 
@@ -122,6 +128,7 @@ func _draw_countries() -> void:
 		var radius := _marker_radius(country)
 		var base_color := _country_color(country)
 		var is_selected := id == selected_country_id
+		var is_player := id == player_country_id
 		var is_hovered := id == hovered_country_id
 
 		draw_circle(pos + Vector2(0, 3), radius + 5.0, Color(0, 0, 0, 0.34))
@@ -138,15 +145,18 @@ func _draw_countries() -> void:
 		elif is_hovered:
 			draw_arc(pos, radius + 11.0, 0.0, TAU, 64, Color(1, 1, 1, 0.65), 2.0, true)
 
+		if is_player:
+			draw_arc(pos, radius + 18.0, 0.0, TAU, 64, Color.html("#80CFA9"), 2.5, true)
+
 		var label := String(country.get("short_name", id))
 		draw_string(font, pos + Vector2(radius + 10.0, 5.0), label, HORIZONTAL_ALIGNMENT_LEFT, 90.0, 14, Color.html("#E8EEF8"))
 
 
 func _draw_overlay() -> void:
 	var font := get_theme_default_font()
-	var tension_text := "Tensao global %.0f%%" % clampf(global_tension, 0.0, 100.0)
+	var tension_text := "Global tension %.0f%%" % clampf(global_tension, 0.0, 100.0)
 	draw_string(font, Vector2(18, 28), tension_text, HORIZONTAL_ALIGNMENT_LEFT, 280.0, 16, Color.html("#E8EEF8"))
-	draw_string(font, Vector2(18, size.y - 22), "Mapa estrategico abstrato - clique em um pais", HORIZONTAL_ALIGNMENT_LEFT, 420.0, 13, Color(0.86, 0.91, 0.98, 0.66))
+	draw_string(font, Vector2(18, size.y - 22), "Abstract strategic map - click a country", HORIZONTAL_ALIGNMENT_LEFT, 420.0, 13, Color(0.86, 0.91, 0.98, 0.66))
 
 
 func _country_at(point: Vector2) -> String:
@@ -164,7 +174,7 @@ func _tooltip_for(country_id: String) -> String:
 	for country in countries:
 		if String(country.get("id", "")) == country_id:
 			var stats: Dictionary = country.get("stats", {})
-			return "%s\nGDP: %.1fT\nEstabilidade: %.0f%%\nProntidao: %.0f%%" % [
+			return "%s\nGDP: %.1fT\nStability: %.0f%%\nReadiness: %.0f%%" % [
 				String(country.get("name", country_id)),
 				float(stats.get("gdp", 0.0)) / 1000.0,
 				float(stats.get("stability", 0.0)),

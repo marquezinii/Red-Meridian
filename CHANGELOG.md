@@ -1,12 +1,13 @@
 # Changelog
 
-Todas as mudancas relevantes do projeto serao registradas aqui.
+All notable project changes will be tracked here.
 
 ## Unreleased
 
-- Criado prototipo inicial em Godot 4.
-- Adicionada cena principal com mapa estrategico abstrato.
-- Adicionados dados iniciais de paises, indicadores e focos nacionais.
-- Adicionado launcher Windows e atalho local.
-- Adicionada documentacao inicial do projeto.
-
+- Created the initial Godot 4 prototype.
+- Added the main scene with an abstract strategic map.
+- Added initial country data, indicators, and national focuses.
+- Added player country selection.
+- Added the first strategic event model.
+- Added the Windows launcher and local desktop shortcut support.
+- Added initial public project documentation.

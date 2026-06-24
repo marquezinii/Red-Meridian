@@ -1,9 +1,10 @@
 .godot/
 .import/
+.agents/
+.codex/
 export/
 build/
 *.tmp
 *.log
 *.user
 *.lnk
-

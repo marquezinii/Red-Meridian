@@ -1,37 +1,36 @@
 ---
 name: Bug report
-about: Reportar um problema no jogo ou no projeto
+about: Report a problem in the game or project
 title: "[Bug] "
 labels: bug
 assignees: ""
 ---
 
-## Descricao
+## Description
 
-Explique o problema de forma objetiva.
+Explain the problem clearly.
 
-## Como reproduzir
+## Steps to Reproduce
 
-1. Abra o projeto.
-2. Va para ...
-3. Clique em ...
-4. Veja o erro.
+1. Open the project.
+2. Go to ...
+3. Click ...
+4. See the issue.
 
-## Resultado esperado
+## Expected Result
 
-O que deveria acontecer?
+What should happen?
 
-## Resultado atual
+## Actual Result
 
-O que aconteceu?
+What happened instead?
 
-## Ambiente
+## Environment
 
 - Windows:
 - Godot:
-- Commit/versao:
+- Commit/version:
 
-## Evidencias
+## Evidence
 
-Cole logs, prints ou detalhes relevantes.
-
+Paste logs, screenshots, or relevant details.

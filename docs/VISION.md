@@ -1,41 +1,40 @@
-# Red Meridian - Visao
+# Red Meridian - Vision
 
-## Proposta
+## Product Pitch
 
-Red Meridian e um jogo 2D de estrategia geopolitica e militar em escala global. O jogador acompanha paises reais, crises, disputas de influencia, capacidade militar, estabilidade interna, economia e decisoes estrategicas de longo prazo.
+Red Meridian is a 2D geopolitical and military strategy game set on a global scale. The player observes and influences countries, crises, alliances, internal stability, military readiness, economic pressure, and long-term strategic decisions.
 
-O objetivo nao e recriar um jogo existente. A referencia de genero ajuda a orientar ambicao, mas os sistemas, fluxo, interface e dados precisam formar uma identidade propria.
+The goal is not to recreate an existing game. Genre references help define ambition, but the systems, interface, data model, and player experience should build a distinct identity.
 
-## Pilares de design
+## Design Pillars
 
-1. Simulacao legivel
-   - O jogador deve entender por que indicadores mudam.
-   - Sistemas complexos precisam ter feedback claro.
+1. Readable simulation
+   - The player should understand why indicators change.
+   - Complex systems need clear feedback and visible consequences.
 
-2. Geopolitica com consequencias
-   - Diplomacia, economia, seguranca interna e postura militar devem se afetar.
-   - Decisoes fortes devem gerar custos e riscos.
+2. Geopolitics with consequences
+   - Diplomacy, economy, internal stability, and military posture should affect one another.
+   - Strong decisions should create costs, tradeoffs, and risks.
 
-3. Escala militar moderna
-   - Prontidao, logistica, doutrina, sensores e projecao de forca importam.
-   - Conflitos devem ser tratados como sistemas, nao apenas numeros soltos.
+3. Modern military scale
+   - Readiness, logistics, doctrine, sensors, and force projection matter.
+   - Conflict should be treated as a system, not only as raw numbers.
 
-4. Dados auditaveis
-   - Dados reais devem ter fonte e data.
-   - Conteudo sensivel precisa de criterio editorial.
+4. Auditable data
+   - Real-world data must have a source and collection date.
+   - Sensitive content requires editorial care.
 
-5. Evolucao por camadas
-   - Primeiro um loop pequeno funcionando.
-   - Depois mapa real, paises completos, eventos, foco nacional, economia, diplomacia, inteligencia e sistemas militares avancados.
+5. Layered development
+   - Build a small working loop first.
+   - Add the real map, complete countries, events, national focuses, economy, diplomacy, intelligence, and advanced military systems in layers.
 
-## Identidade inicial
+## Initial Identity
 
-- Interface densa, clara e operacional.
-- Visual 2D com foco em mapa, paineis e tomada de decisao.
-- Estetica sobria, moderna e legivel.
-- Tom de simulador, sem propaganda politica.
+- Dense, readable operational interface.
+- 2D map-first presentation.
+- Sober modern visual style.
+- Simulation tone without political propaganda.
 
-## Principio editorial
+## Editorial Principle
 
-Quando usar nomes, lideres ou eventos reais, o projeto deve separar fato, simulacao e hipotese. O jogo pode simular cenarios alternativos, mas precisa deixar claro quando algo e dado historico e quando e resultado da simulacao.
-
+When the project uses real names, leaders, or events, it must separate fact, simulation, and hypothetical outcomes. Alternate-history or future scenarios are valid gameplay material, but the game should be clear about what is historical data and what is simulated output.

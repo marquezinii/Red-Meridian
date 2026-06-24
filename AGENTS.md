@@ -1,27 +1,28 @@
 # AGENTS.md
 
-Instrucoes para agentes trabalhando neste repositorio.
+Instructions for agents working in this repository.
 
-## Idioma
+## Language
 
-Responda em portugues do Brasil. Mantenha nomes tecnicos, comandos, erros, APIs, bibliotecas e trechos de codigo no idioma original.
+When interacting with the project owner, answer in Brazilian Portuguese. Keep technical names, commands, errors, APIs, libraries, and code snippets in their original language.
 
-## Forma de trabalho
+Repository-facing documentation, public text, UI labels, and gameplay content should be written in clear English unless the owner asks otherwise.
 
-- Entenda a estrutura antes de editar.
-- Corrija a causa real do problema.
-- Preserve funcionalidades existentes.
-- Prefira mudancas pequenas, simples e seguras.
-- Evite dependencias novas quando uma solucao nativa ou ja instalada resolver.
-- Mantenha compatibilidade com Windows.
-- Rode validacoes quando fizer sentido.
-- Explique no final o que mudou, onde mudou e por que.
+## Working Style
 
-## Projeto
+- Understand the structure before editing.
+- Fix the real cause of a problem.
+- Preserve existing functionality.
+- Prefer small, simple, safe changes.
+- Avoid new dependencies when a native or already installed solution is enough.
+- Keep Windows compatibility in mind.
+- Run useful validations before finishing.
+- Explain what changed, where it changed, and why.
 
-Red Meridian e um jogo 2D de estrategia geopolitica e militar em Godot 4. O projeto deve permanecer abrivel e testavel durante toda a evolucao.
+## Project
 
-## Dados reais
+Red Meridian is a 2D geopolitical and military strategy game built with Godot 4. The project should remain openable and testable throughout development.
 
-Nao adicionar fotos, retratos, logos, textos protegidos ou datasets de terceiros sem fonte e licenca clara. Para conteudo politico real, separar fato, simulacao e hipotese.
+## Real-World Data
 
+Do not add third-party photos, portraits, logos, protected text, or datasets without clear source and license information. For real political content, separate fact, simulation, and hypothesis.

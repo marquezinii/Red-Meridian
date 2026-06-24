@@ -1,19 +1,19 @@
-# Contribuindo
+# Contributing
 
-Red Meridian ainda esta em fase inicial. Contribuicoes futuras devem priorizar estabilidade, clareza e evolucao incremental.
+Red Meridian is still in an early prototype stage. Future contributions should prioritize stability, clarity, and incremental progress.
 
-## Regras praticas
+## Practical Rules
 
-- Mantenha o projeto abrivel no Godot 4.
-- Prefira mudancas pequenas e testaveis.
-- Evite dependencias novas sem justificativa.
-- Nao adicione imagens, fotos, logos, textos ou datasets de terceiros sem fonte e licenca clara.
-- Separe dados de gameplay dos scripts sempre que possivel.
-- Documente mudancas relevantes em `docs/`.
+- Keep the project openable in Godot 4.
+- Prefer small, testable changes.
+- Avoid new dependencies unless they solve a real problem.
+- Do not add third-party images, portraits, logos, text, or datasets without clear source and license information.
+- Keep gameplay data separate from scripts when practical.
+- Document meaningful decisions in `docs/`.
 
 ## Commits
 
-Use mensagens objetivas, por exemplo:
+Use direct commit messages, for example:
 
 ```text
 Add initial country focus data
@@ -21,12 +21,11 @@ Fix launcher Godot path detection
 Create basic diplomacy panel
 ```
 
-## Dados reais
+## Real-World Data
 
-Dados reais devem informar:
+Real-world data should include:
 
-- fonte;
-- data de coleta;
-- licenca ou permissao;
-- criterio de adaptacao para gameplay.
-
+- source;
+- collection date;
+- license or permission;
+- adaptation criteria for gameplay.

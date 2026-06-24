@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+$projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 
 function Find-Godot {
     if ($env:GODOT_EXE -and (Test-Path $env:GODOT_EXE)) {
@@ -16,6 +16,8 @@ function Find-Godot {
     }
 
     $patterns = @(
+        (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages\GodotEngine.GodotEngine*\Godot*.exe"),
+        (Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\Godot*.exe"),
         (Join-Path $env:ProgramFiles "Godot*\Godot*.exe"),
         (Join-Path ${env:ProgramFiles(x86)} "Godot*\Godot*.exe"),
         (Join-Path $env:LOCALAPPDATA "Programs\Godot*\Godot*.exe"),
@@ -27,7 +29,10 @@ function Find-Godot {
     )
 
     foreach ($pattern in $patterns) {
-        $match = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -First 1
+        $match = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notmatch "_console" } |
+            Sort-Object FullName |
+            Select-Object -First 1
         if ($match) {
             return $match.FullName
         }
@@ -49,13 +54,13 @@ function Find-Godot {
 $godot = Find-Godot
 if (-not $godot) {
     Write-Host ""
-    Write-Host "Nao encontrei o Godot automaticamente."
-    Write-Host "Instale o Godot 4, adicione o executavel ao PATH ou defina a variavel GODOT_EXE."
-    Write-Host "Projeto: $projectRoot"
+    Write-Host "Godot was not found automatically."
+    Write-Host "Install Godot 4, add it to PATH, or set the GODOT_EXE environment variable."
+    Write-Host "Project: $projectRoot"
     Write-Host ""
     pause
     exit 1
 }
 
-Write-Host "Abrindo Red Meridian com: $godot"
-Start-Process -FilePath $godot -ArgumentList @("--path", $projectRoot)
+Write-Host "Launching Red Meridian with: $godot"
+Start-Process -FilePath $godot -ArgumentList @("--path", $projectRoot) -WorkingDirectory $projectRoot

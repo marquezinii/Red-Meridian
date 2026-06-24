@@ -2,10 +2,14 @@ extends Control
 
 const MapCanvasScript = preload("res://scripts/ui/MapCanvas.gd")
 const COUNTRY_DATA_PATH := "res://data/countries.json"
+const EVENTS_DATA_PATH := "res://data/events.json"
 
 var countries: Array = []
+var events: Array = []
 var selected_country_id := ""
+var player_country_id := ""
 var active_focuses: Dictionary = {}
+var event_cooldowns: Dictionary = {}
 var log_lines: Array[String] = []
 
 var current_year := 2027
@@ -30,13 +34,15 @@ var log_label: RichTextLabel
 func _ready() -> void:
 	DisplayServer.window_set_title("Red Meridian")
 	_load_countries()
+	_load_events()
 	if countries.is_empty():
-		push_error("Nenhum pais foi carregado de %s" % COUNTRY_DATA_PATH)
+		push_error("No countries were loaded from %s" % COUNTRY_DATA_PATH)
 		return
 
 	selected_country_id = String(countries[0].get("id", ""))
+	player_country_id = selected_country_id
 	_build_layout()
-	_log("Red Meridian iniciado. Prototipo local pronto para testes.")
+	_log("Red Meridian initialized. Local prototype ready for testing.")
 	_refresh_all()
 	set_process(true)
 
@@ -52,17 +58,25 @@ func _process(delta: float) -> void:
 
 
 func _load_countries() -> void:
-	var file := FileAccess.open(COUNTRY_DATA_PATH, FileAccess.READ)
+	countries = _load_json_array(COUNTRY_DATA_PATH)
+
+
+func _load_events() -> void:
+	events = _load_json_array(EVENTS_DATA_PATH)
+
+
+func _load_json_array(path: String) -> Array:
+	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		push_error("Falha ao abrir %s" % COUNTRY_DATA_PATH)
-		return
+		push_error("Failed to open %s" % path)
+		return []
 
 	var parsed = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) == TYPE_ARRAY:
-		countries = parsed
-	else:
-		push_error("Arquivo de paises invalido: %s" % COUNTRY_DATA_PATH)
+		return parsed
 
+	push_error("Invalid JSON array: %s" % path)
+	return []
 
 func _build_layout() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -169,7 +183,7 @@ func _build_top_bar() -> Control:
 	title_box.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.text = "Simulador geopolitico e militar 2D"
+	subtitle.text = "2D geopolitical and military simulator"
 	subtitle.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.62))
 	title_box.add_child(subtitle)
 
@@ -202,7 +216,7 @@ func _build_top_bar() -> Control:
 	bar.add_child(pause_button)
 
 	var day_button := Button.new()
-	day_button.text = "+1 dia"
+	day_button.text = "+1 day"
 	day_button.custom_minimum_size = Vector2(80, 34)
 	day_button.pressed.connect(_advance_day)
 	bar.add_child(day_button)
@@ -227,14 +241,15 @@ func _refresh_all() -> void:
 
 func _refresh_top_bar() -> void:
 	date_label.text = "%02d/%02d/%04d" % [current_day, current_month, current_year]
-	status_label.text = "Pausado" if paused else "Rodando %sx" % speed
-	pause_button.text = "Continuar" if paused else "Pausar"
+	status_label.text = "Paused" if paused else "Running %sx" % speed
+	pause_button.text = "Resume" if paused else "Pause"
 	tension_bar.value = global_tension
 
 
 func _refresh_map() -> void:
 	map_canvas.set_countries(countries)
 	map_canvas.set_selected_country(selected_country_id)
+	map_canvas.set_player_country(player_country_id)
 	map_canvas.set_global_tension(global_tension)
 
 
@@ -244,27 +259,29 @@ func _refresh_country_panel() -> void:
 	if country.is_empty():
 		return
 
-	country_panel.add_child(_section_title(String(country.get("name", "Pais"))))
+	country_panel.add_child(_section_title(String(country.get("name", "Country"))))
 	country_panel.add_child(_muted_label("%s | %s | Capital: %s" % [
 		String(country.get("region", "")),
 		String(country.get("bloc", "")),
 		String(country.get("capital", ""))
 	]))
-	country_panel.add_child(_muted_label("Lider: %s" % String(country.get("leader", "Pendente"))))
+	country_panel.add_child(_muted_label("Leader: %s" % String(country.get("leader", "Pending"))))
+	country_panel.add_child(_muted_label("Player country: %s" % ("Yes" if String(country.get("id", "")) == player_country_id else "No")))
 
 	var stats: Dictionary = country.get("stats", {})
 	country_panel.add_child(_stat_row("GDP", "$%.2fT" % (float(stats.get("gdp", 0.0)) / 1000.0)))
-	country_panel.add_child(_progress_row("Estabilidade", float(stats.get("stability", 0.0)), Color("#79D0FF")))
-	country_panel.add_child(_progress_row("Poder militar", float(stats.get("military", 0.0)), Color("#D95F5F")))
-	country_panel.add_child(_progress_row("Prontidao", float(stats.get("readiness", 0.0)), Color("#F4D35E")))
-	country_panel.add_child(_progress_row("Diplomacia", float(stats.get("diplomacy", 0.0)), Color("#80CFA9")))
-	country_panel.add_child(_progress_row("Tensao local", float(stats.get("tension", 0.0)), Color("#D18CE0")))
+	country_panel.add_child(_progress_row("Stability", float(stats.get("stability", 0.0)), Color.html("#79D0FF")))
+	country_panel.add_child(_progress_row("Military power", float(stats.get("military", 0.0)), Color.html("#D95F5F")))
+	country_panel.add_child(_progress_row("Readiness", float(stats.get("readiness", 0.0)), Color.html("#F4D35E")))
+	country_panel.add_child(_progress_row("Diplomacy", float(stats.get("diplomacy", 0.0)), Color.html("#80CFA9")))
+	country_panel.add_child(_progress_row("Local tension", float(stats.get("tension", 0.0)), Color.html("#D18CE0")))
 
-	country_panel.add_child(_section_title("Acoes de governo"))
-	country_panel.add_child(_decision_button("Pacote economico", "economy"))
-	country_panel.add_child(_decision_button("Investir em defesa", "defense"))
-	country_panel.add_child(_decision_button("Pressao diplomatica", "pressure"))
-	country_panel.add_child(_decision_button("Desescalar tensoes", "deescalate"))
+	country_panel.add_child(_section_title("Government Actions"))
+	country_panel.add_child(_decision_button("Set as player country", "set_player"))
+	country_panel.add_child(_decision_button("Economic package", "economy"))
+	country_panel.add_child(_decision_button("Defense investment", "defense"))
+	country_panel.add_child(_decision_button("Diplomatic pressure", "pressure"))
+	country_panel.add_child(_decision_button("De-escalate tensions", "deescalate"))
 
 
 func _refresh_focus_panel() -> void:
@@ -273,16 +290,16 @@ func _refresh_focus_panel() -> void:
 	if country.is_empty():
 		return
 
-	focus_panel.add_child(_section_title("Arvore de foco"))
-	focus_panel.add_child(_muted_label("Primeira versao: cada pais tem focos nacionais com duracao e efeitos. Depois vamos transformar isso em uma arvore visual completa."))
+	focus_panel.add_child(_section_title("National Focus"))
+	focus_panel.add_child(_muted_label("First version: each country has national focuses with duration and effects. Later this becomes a full visual branching tree."))
 
 	var country_id := String(country.get("id", ""))
 	if active_focuses.has(country_id):
 		var active: Dictionary = active_focuses[country_id]
 		var focus: Dictionary = active.get("focus", {})
 		focus_panel.add_child(_status_card(
-			"Foco ativo",
-			"%s\nRestam %d dias" % [String(focus.get("title", "")), int(active.get("remaining", 0))]
+			"Active focus",
+			"%s\n%d days remaining" % [String(focus.get("title", "")), int(active.get("remaining", 0))]
 		))
 
 	var focuses: Array = country.get("focuses", [])
@@ -303,7 +320,7 @@ func _select_country(country_id: String) -> void:
 	selected_country_id = country_id
 	var country := _selected_country()
 	if not country.is_empty():
-		_log("Pais selecionado: %s" % String(country.get("name", country_id)))
+		_log("Selected country: %s" % String(country.get("name", country_id)))
 	_refresh_all()
 
 
@@ -315,7 +332,7 @@ func _toggle_pause() -> void:
 func _set_speed(value: int) -> void:
 	speed = value
 	paused = false
-	_log("Velocidade ajustada para %sx." % speed)
+	_log("Speed set to %sx." % speed)
 	_refresh_all()
 
 
@@ -350,6 +367,57 @@ func _weekly_tick() -> void:
 		country["stats"] = stats
 
 	global_tension = clampf(global_tension + 0.1, 0.0, 100.0)
+	_process_strategic_events()
+
+
+func _process_strategic_events() -> void:
+	if events.is_empty() or elapsed_days % 14 != 0:
+		return
+
+	var eligible: Array = []
+	for event in events:
+		var event_id := String(event.get("id", ""))
+		var min_tension := float(event.get("min_global_tension", 0.0))
+		var max_tension := float(event.get("max_global_tension", 100.0))
+		var cooldown_days := int(event.get("cooldown_days", 42))
+		var last_triggered := int(event_cooldowns.get(event_id, -99999))
+		var off_cooldown := elapsed_days - last_triggered >= cooldown_days
+		if global_tension >= min_tension and global_tension <= max_tension and off_cooldown:
+			eligible.append(event)
+
+	if eligible.is_empty():
+		return
+
+	var index := int((elapsed_days / 14) + countries.size()) % eligible.size()
+	var selected_event: Dictionary = eligible[index]
+	_apply_strategic_event(selected_event)
+
+
+func _apply_strategic_event(event: Dictionary) -> void:
+	var event_id := String(event.get("id", ""))
+	event_cooldowns[event_id] = elapsed_days
+
+	var effects: Dictionary = event.get("effects", {})
+	if effects.has("global_tension"):
+		global_tension = clampf(global_tension + float(effects.get("global_tension", 0.0)), 0.0, 100.0)
+
+	var country_effects: Dictionary = event.get("country_effects", {})
+	for country_id in country_effects.keys():
+		var country := _country_by_id(String(country_id))
+		if country.is_empty():
+			continue
+		var stats: Dictionary = country.get("stats", {})
+		var stat_effects: Dictionary = country_effects[country_id]
+		for stat_key in stat_effects.keys():
+			if stats.has(stat_key):
+				stats[stat_key] = float(stats.get(stat_key, 0.0)) + float(stat_effects[stat_key])
+		_clamp_stats(stats)
+		country["stats"] = stats
+
+	_log("Strategic event: %s - %s" % [
+		String(event.get("title", "Untitled event")),
+		String(event.get("description", ""))
+	])
 
 
 func _process_focuses() -> void:
@@ -366,7 +434,7 @@ func _process_focuses() -> void:
 		var focus: Dictionary = active.get("focus", {})
 		_apply_focus_effects(country_id, focus)
 		active_focuses.erase(country_id)
-		_log("Foco concluido: %s (%s)." % [String(focus.get("title", "")), country_id])
+		_log("Focus completed: %s (%s)." % [String(focus.get("title", "")), country_id])
 
 
 func _apply_focus_effects(country_id: String, focus: Dictionary) -> void:
@@ -389,14 +457,14 @@ func _apply_focus_effects(country_id: String, focus: Dictionary) -> void:
 
 func _start_focus(country_id: String, focus: Dictionary) -> void:
 	if active_focuses.has(country_id):
-		_log("Este pais ja tem um foco ativo.")
+		_log("This country already has an active focus.")
 		return
 
 	active_focuses[country_id] = {
 		"focus": focus,
 		"remaining": int(focus.get("duration_days", 30))
 	}
-	_log("Foco iniciado: %s (%s)." % [String(focus.get("title", "")), country_id])
+	_log("Focus started: %s (%s)." % [String(focus.get("title", "")), country_id])
 	_refresh_all()
 
 
@@ -406,29 +474,32 @@ func _run_decision(decision_id: String) -> void:
 		return
 
 	var stats: Dictionary = country.get("stats", {})
-	var country_name := String(country.get("name", "Pais"))
+	var country_name := String(country.get("name", "Country"))
 
 	match decision_id:
+		"set_player":
+			player_country_id = String(country.get("id", ""))
+			_log("%s is now the player country." % country_name)
 		"economy":
 			stats["gdp"] = float(stats.get("gdp", 0.0)) + 25.0
 			stats["stability"] = float(stats.get("stability", 0.0)) + 1.0
-			_log("%s aprovou um pacote economico." % country_name)
+			_log("%s approved an economic package." % country_name)
 		"defense":
 			stats["military"] = float(stats.get("military", 0.0)) + 1.5
 			stats["readiness"] = float(stats.get("readiness", 0.0)) + 2.0
 			stats["stability"] = float(stats.get("stability", 0.0)) - 0.5
 			global_tension = clampf(global_tension + 0.6, 0.0, 100.0)
-			_log("%s elevou investimentos de defesa." % country_name)
+			_log("%s increased defense investment." % country_name)
 		"pressure":
 			stats["diplomacy"] = float(stats.get("diplomacy", 0.0)) + 1.0
 			stats["tension"] = float(stats.get("tension", 0.0)) + 2.0
 			global_tension = clampf(global_tension + 0.8, 0.0, 100.0)
-			_log("%s iniciou pressao diplomatica." % country_name)
+			_log("%s applied diplomatic pressure." % country_name)
 		"deescalate":
 			stats["diplomacy"] = float(stats.get("diplomacy", 0.0)) + 1.5
 			stats["tension"] = float(stats.get("tension", 0.0)) - 2.5
 			global_tension = clampf(global_tension - 0.5, 0.0, 100.0)
-			_log("%s buscou reduzir tensoes." % country_name)
+			_log("%s moved to de-escalate tensions." % country_name)
 
 	_clamp_stats(stats)
 	country["stats"] = stats
@@ -568,13 +639,13 @@ func _focus_card(country_id: String, focus: Dictionary) -> Control:
 	box.add_theme_constant_override("separation", 7)
 	panel.add_child(box)
 
-	box.add_child(_section_title(String(focus.get("title", "Foco"))))
+	box.add_child(_section_title(String(focus.get("title", "Focus"))))
 	box.add_child(_muted_label(String(focus.get("description", ""))))
-	box.add_child(_muted_label("Duracao: %d dias" % int(focus.get("duration_days", 30))))
-	box.add_child(_muted_label("Efeitos: %s" % _format_effects(focus.get("effects", {}))))
+	box.add_child(_muted_label("Duration: %d days" % int(focus.get("duration_days", 30))))
+	box.add_child(_muted_label("Effects: %s" % _format_effects(focus.get("effects", {}))))
 
 	var button := Button.new()
-	button.text = "Iniciar foco"
+	button.text = "Start focus"
 	button.disabled = active_focuses.has(country_id)
 	button.pressed.connect(_start_focus.bind(country_id, focus))
 	box.add_child(button)

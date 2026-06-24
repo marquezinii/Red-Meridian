@@ -1,5 +1,9 @@
 * text=auto
 
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
 *.gd text eol=lf
 *.tscn text eol=lf
 *.tres text eol=lf
@@ -8,6 +12,7 @@
 *.md text eol=lf
 *.yml text eol=lf
 *.ps1 text eol=lf
+*.svg text eol=lf
 *.cmd text eol=crlf
 
 *.png binary

@@ -1,24 +1,23 @@
 ---
 name: Feature request
-about: Sugerir uma nova funcionalidade ou melhoria
+about: Suggest a new feature or improvement
 title: "[Feature] "
 labels: enhancement
 assignees: ""
 ---
 
-## Objetivo
+## Goal
 
-Qual problema essa funcionalidade resolve?
+What problem does this feature solve?
 
-## Proposta
+## Proposal
 
-Descreva a ideia.
+Describe the idea.
 
-## Impacto no gameplay
+## Gameplay Impact
 
-Como isso muda a experiencia do jogador?
+How would this change the player experience?
 
-## Observacoes
+## Notes
 
-Inclua referencias, riscos ou alternativas.
-
+Add references, risks, or alternatives.

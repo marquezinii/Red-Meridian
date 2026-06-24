@@ -1,47 +1,55 @@
-# Direcao Tecnica
+# Technical Direction
 
 ## Engine
 
-O projeto usa Godot 4 por ser gratuita, local, leve, adequada para 2D e viavel para um desenvolvimento longo sem custo de licenca.
+Red Meridian uses Godot 4 because it is free, local, lightweight, strong for 2D projects, and practical for long-term development without engine licensing costs.
 
-## Linguagem
+## Language
 
-O prototipo usa GDScript. Para a fase atual, isso reduz complexidade e acelera iteracao dentro da propria engine.
+The prototype uses GDScript. At this stage, GDScript keeps iteration fast and reduces the amount of infrastructure required outside the engine.
 
-## Estrutura atual
+## Current Structure
 
 ```text
-assets/              Assets visuais pequenos e placeholders
-data/                Dados estruturados do jogo
-docs/                Planejamento e documentacao
-scenes/              Cenas Godot
-scripts/             Scripts GDScript e utilitarios
-scripts/launch/      Launcher Windows
+assets/              Small visual assets and placeholders
+data/                Structured gameplay data
+docs/                Planning and documentation
+scenes/              Godot scenes
+scripts/             GDScript and utility scripts
+scripts/launch/      Windows launcher
 ```
 
-## Dados
+## Data
 
-Dados de gameplay ficam fora do script sempre que possivel. O arquivo `data/countries.json` e o primeiro exemplo disso.
+Gameplay content should live outside scripts whenever practical. `data/countries.json` and `data/events.json` are the first examples of this direction.
 
-Diretriz:
+Guidelines:
 
-- scripts controlam comportamento;
-- JSON/recursos controlam conteudo;
-- dados reais precisam de fonte antes de entrar como conteudo publico.
+- scripts control behavior;
+- JSON/resources control content;
+- real-world data needs a source before it becomes public content.
 
-## Compatibilidade Windows
+## Windows Compatibility
 
-O launcher principal e `launch_red_meridian.cmd`, que chama PowerShell com `ExecutionPolicy Bypass` apenas para o script local do projeto. Isso evita o problema comum de `npm.ps1`/scripts bloqueados por policy no Windows.
+The main launcher is `launch_red_meridian.cmd`, which calls PowerShell with `ExecutionPolicy Bypass` only for the local project launcher script. This avoids common Windows script policy issues while keeping the launcher simple.
+
+The launcher searches for Godot in:
+
+- `GODOT_EXE`;
+- `PATH`;
+- WinGet package folders;
+- common Program Files locations;
+- Steam and Epic Games folders;
+- Downloads.
 
 ## Git
 
-O repositorio deve manter commits pequenos e descritivos. Arquivos gerados pela Godot, builds e logs ficam fora do versionamento via `.gitignore`.
+Commits should be small and descriptive. Generated Godot files, local Codex state, builds, and logs should stay out of version control through `.gitignore`.
 
-## Proximas decisoes tecnicas
+## Upcoming Technical Decisions
 
-- Definir pipeline de mapa real.
-- Definir formato de save.
-- Definir validacao automatizada dos JSONs.
-- Definir padrao para eventos, focos e relacoes diplomaticas.
-- Definir estrategia para assets com licenca segura.
-
+- Real map pipeline.
+- Save file format.
+- Automated JSON validation.
+- Event, focus, and diplomatic relation schemas.
+- Safe asset licensing strategy.

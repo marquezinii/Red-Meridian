@@ -1,0 +1,55 @@
+[
+  {
+    "id": "energy_market_shock",
+    "title": "Energy Market Shock",
+    "description": "A sudden energy price swing pressures importers and increases diplomatic urgency.",
+    "min_global_tension": 10,
+    "cooldown_days": 42,
+    "effects": { "global_tension": 1.5 },
+    "country_effects": {
+      "DEU": { "stability": -1, "gdp": -18 },
+      "RUS": { "gdp": 24, "diplomacy": -1 },
+      "IND": { "gdp": -10 }
+    }
+  },
+  {
+    "id": "maritime_incident",
+    "title": "Maritime Incident",
+    "description": "A contested naval encounter raises alert levels across the Indo-Pacific.",
+    "min_global_tension": 20,
+    "cooldown_days": 56,
+    "effects": { "global_tension": 2.5 },
+    "country_effects": {
+      "USA": { "readiness": 1.5 },
+      "CHN": { "tension": 2, "readiness": 1 },
+      "JPN": { "readiness": 2, "tension": 1.5 }
+    }
+  },
+  {
+    "id": "regional_mediation_window",
+    "title": "Regional Mediation Window",
+    "description": "A brief diplomatic opening gives non-aligned states room to lower tensions.",
+    "min_global_tension": 12,
+    "cooldown_days": 45,
+    "effects": { "global_tension": -1.2 },
+    "country_effects": {
+      "BRA": { "diplomacy": 2, "tension": -1 },
+      "IND": { "diplomacy": 1.5 },
+      "ZAF": { "diplomacy": 2 }
+    }
+  },
+  {
+    "id": "supply_chain_disruption",
+    "title": "Supply Chain Disruption",
+    "description": "Critical shipping and electronics supply lines face delays, exposing strategic dependencies.",
+    "min_global_tension": 15,
+    "cooldown_days": 49,
+    "effects": { "global_tension": 1 },
+    "country_effects": {
+      "USA": { "gdp": -35 },
+      "CHN": { "gdp": -28 },
+      "JPN": { "gdp": -18 },
+      "DEU": { "gdp": -20 }
+    }
+  }
+]
