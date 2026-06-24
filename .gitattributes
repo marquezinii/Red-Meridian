@@ -21,5 +21,6 @@
 *.webp binary
 *.gif binary
 *.ico binary
+*.ttf binary
 *.exe binary
 *.pck binary

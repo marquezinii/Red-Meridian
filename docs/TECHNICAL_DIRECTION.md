@@ -12,6 +12,7 @@ The prototype uses GDScript. At this stage, GDScript keeps iteration fast and re
 
 ```text
 assets/              Small visual assets and placeholders
+assets/fonts/        Bundled open fonts used by the UI
 data/                Structured gameplay data
 docs/                Planning and documentation
 scenes/              Godot scenes

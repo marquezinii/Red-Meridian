@@ -37,6 +37,9 @@ The launcher searches for a local Godot 4 installation and opens this folder as 
 - Player country selection.
 - Early strategic event model.
 - Runtime settings screen with General, Display, Graphics, and Audio tabs.
+- Display settings for monitor, native resolution, window mode, VSync, FPS cap, UI scale, and cursor confinement.
+- Graphics presets with a Custom state when individual options are changed.
+- Audio settings where Master Volume caps Music, Effects, and Interface volume sliders.
 - Initial English and Brazilian Portuguese localization support.
 - External JSON data files for countries and events.
 
@@ -61,6 +64,13 @@ Planning documents live in `docs/`:
 Country names are factual data. However, portraits, photos, biographies, logos, detailed political datasets, and any third-party material require clear sourcing, licensing, and editorial review before public use.
 
 For now, the project uses placeholders and keeps the data structure ready for audited content later.
+
+## Third-Party Assets
+
+- `assets/fonts/Orbitron-Variable.ttf`: Orbitron, licensed under the SIL Open Font License.
+- `assets/fonts/Inter-Variable.ttf`: Inter, licensed under the SIL Open Font License.
+
+Font license files are stored next to the font files.
 
 ## License
 

@@ -12,6 +12,8 @@ All notable project changes will be tracked here.
 - Added a generated original main menu background.
 - Added the first main menu with Single Player, Multiplayer placeholder, Settings, About, and Quit.
 - Added Settings tabs for General, Display, Graphics, and Audio.
+- Improved main menu typography with bundled open fonts.
+- Expanded Settings with monitor detection, native resolution, FPS cap, UI scale, cursor confinement, graphics Custom preset logic, and stronger audio volume rules.
 - Added initial English and Brazilian Portuguese localization.
 - Added a Godot smoke test for menu navigation.
 - Added the Windows launcher and local desktop shortcut support.

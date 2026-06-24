@@ -5,12 +5,16 @@ const COUNTRY_DATA_PATH := "res://data/countries.json"
 const EVENTS_DATA_PATH := "res://data/events.json"
 const LOCALIZATION_DATA_PATH := "res://data/localization.json"
 const MENU_BACKGROUND_PATH := "res://assets/backgrounds/main_menu_background.png"
+const TITLE_FONT_PATH := "res://assets/fonts/Orbitron-Variable.ttf"
+const BODY_FONT_PATH := "res://assets/fonts/Inter-Variable.ttf"
 
 var countries: Array = []
 var events: Array = []
 var localization: Dictionary = {}
 var current_screen := "menu"
 var current_language := "en"
+var title_font: Font
+var body_font: Font
 var selected_country_id := ""
 var player_country_id := ""
 var active_focuses: Dictionary = {}
@@ -28,13 +32,48 @@ var global_tension := 18.0
 
 var settings_window_mode := "borderless"
 var settings_resolution := Vector2i(1920, 1080)
+var settings_monitor := 0
 var settings_vsync := true
+var settings_frame_rate_cap := 144
+var settings_ui_scale := 100
+var settings_cursor_confined := true
+var settings_pause_on_focus_loss := true
+var settings_tutorial_hints := true
+var settings_confirm_major_actions := true
+var settings_autosave_interval := 10
+var settings_measurement_system := "metric"
 var settings_graphics_preset := "high"
+var graphics_bool_settings := {
+	"strategic_lighting": true,
+	"map_effects": true,
+	"unit_shadows": true,
+	"post_processing": true,
+	"water_reflections": false,
+	"terrain_relief": true,
+	"animated_markers": true,
+	"bloom": false,
+	"camera_tilt_effects": true,
+	"political_map_shading": true
+}
+var graphics_choice_settings := {
+	"map_texture_quality": "high",
+	"anti_aliasing": "fxaa",
+	"effects_density": "high",
+	"shadow_quality": "high",
+	"camera_quality": "standard"
+}
 var settings_audio_device := "Default"
-var settings_master_volume := 80.0
+var settings_master_volume := 100.0
 var settings_music_volume := 70.0
 var settings_effects_volume := 75.0
 var settings_interface_volume := 80.0
+var settings_mute_when_unfocused := false
+var settings_menu_music := true
+var settings_ui_feedback_sounds := true
+var settings_dynamic_range := "wide"
+var settings_active_tab := 0
+var audio_sub_sliders: Dictionary = {}
+var audio_sub_labels: Dictionary = {}
 
 var date_label: Label
 var status_label: Label
@@ -48,9 +87,11 @@ var log_label: RichTextLabel
 
 func _ready() -> void:
 	DisplayServer.window_set_title("Red Meridian")
+	_load_fonts()
 	_load_localization()
 	_load_countries()
 	_load_events()
+	_initialize_runtime_settings()
 	if countries.is_empty():
 		push_error("No countries were loaded from %s" % COUNTRY_DATA_PATH)
 		return
@@ -59,6 +100,12 @@ func _ready() -> void:
 	player_country_id = selected_country_id
 	_show_main_menu()
 	set_process(true)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and settings_pause_on_focus_loss and current_screen == "game":
+		paused = true
+		_refresh_top_bar()
 
 
 func _process(delta: float) -> void:
@@ -79,6 +126,27 @@ func _load_countries() -> void:
 
 func _load_events() -> void:
 	events = _load_json_array(EVENTS_DATA_PATH)
+
+
+func _load_fonts() -> void:
+	title_font = _load_dynamic_font(TITLE_FONT_PATH)
+	body_font = _load_dynamic_font(BODY_FONT_PATH)
+
+
+func _load_dynamic_font(path: String) -> Font:
+	var font := FontFile.new()
+	var error := font.load_dynamic_font(path)
+	if error != OK:
+		push_warning("Failed to load font: %s" % path)
+		return null
+	return font
+
+
+func _initialize_runtime_settings() -> void:
+	settings_monitor = DisplayServer.window_get_current_screen()
+	settings_resolution = _current_screen_size()
+	_apply_graphics_preset("high")
+	_apply_audio_settings()
 
 
 func _load_localization() -> void:
@@ -221,18 +289,25 @@ func _add_menu_background() -> void:
 
 func _menu_title(title_text: String, subtitle_text: String) -> Control:
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
+	box.add_theme_constant_override("separation", 6)
 
 	var title := Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 34)
-	title.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	title.add_theme_font_size_override("font_size", 52)
+	title.add_theme_color_override("font_color", Color.html("#F2F6FF"))
+	title.add_theme_color_override("font_outline_color", Color.html("#111927"))
+	title.add_theme_constant_override("outline_size", 4)
+	if title_font:
+		title.add_theme_font_override("font", title_font)
 	box.add_child(title)
 
 	var subtitle := Label.new()
 	subtitle.text = subtitle_text
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	subtitle.add_theme_font_size_override("font_size", 15)
 	subtitle.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.72))
+	if body_font:
+		subtitle.add_theme_font_override("font", body_font)
 	box.add_child(subtitle)
 
 	return box
@@ -243,6 +318,15 @@ func _menu_button(text: String, callback: Callable) -> Button:
 	button.text = text
 	button.custom_minimum_size = Vector2(0, 42)
 	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", 15)
+	if body_font:
+		button.add_theme_font_override("font", body_font)
+	button.add_theme_stylebox_override("normal", _style_box(Color(0.11, 0.14, 0.13, 0.88), Color(0.50, 0.57, 0.52, 0.70)))
+	button.add_theme_stylebox_override("hover", _style_box(Color(0.18, 0.22, 0.20, 0.92), Color.html("#80CFA9")))
+	button.add_theme_stylebox_override("pressed", _style_box(Color(0.08, 0.12, 0.13, 0.98), Color.html("#F4D35E")))
+	button.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	button.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
+	button.add_theme_color_override("font_pressed_color", Color.html("#F4D35E"))
 	button.pressed.connect(callback)
 	return button
 
@@ -251,7 +335,10 @@ func _footer_label() -> Label:
 	var footer := Label.new()
 	footer.text = "%s | Godot 4 | %s" % [_text("menu.version"), ProjectSettings.get_setting("application/config/name", "Red Meridian")]
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	footer.add_theme_font_size_override("font_size", 13)
 	footer.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.62))
+	if body_font:
+		footer.add_theme_font_override("font", body_font)
 	return footer
 
 
@@ -315,12 +402,14 @@ func _show_about_screen() -> void:
 	root.add_child(_footer_label())
 
 
-func _show_settings_screen() -> void:
+func _show_settings_screen(active_tab: int = -1) -> void:
 	current_screen = "settings"
 	paused = true
+	if active_tab >= 0:
+		settings_active_tab = active_tab
 	_reset_scene()
 	var root := _build_menu_shell()
-	var panel := _make_translucent_panel(820, 0)
+	var panel := _make_translucent_panel(930, 0)
 	root.add_child(panel)
 
 	var box := VBoxContainer.new()
@@ -338,6 +427,10 @@ func _show_settings_screen() -> void:
 	tabs.add_child(_settings_display_tab())
 	tabs.add_child(_settings_graphics_tab())
 	tabs.add_child(_settings_audio_tab())
+	tabs.current_tab = clampi(settings_active_tab, 0, tabs.get_tab_count() - 1)
+	tabs.tab_changed.connect(func(tab: int) -> void:
+		settings_active_tab = tab
+	)
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
@@ -356,7 +449,7 @@ func _settings_general_tab() -> Control:
 	var box := _settings_tab(_text("settings.general"))
 	box.add_child(_settings_label(_text("settings.language")))
 
-	var language_select := OptionButton.new()
+	var language_select := _settings_option_button()
 	language_select.add_item(_text("settings.language_en"))
 	language_select.set_item_metadata(0, "en")
 	language_select.add_item(_text("settings.language_pt"))
@@ -365,14 +458,58 @@ func _settings_general_tab() -> Control:
 	language_select.item_selected.connect(_on_language_selected.bind(language_select))
 	box.add_child(language_select)
 
+	box.add_child(_settings_label(_text("settings.autosave_interval")))
+	var autosave_select := _settings_option_button()
+	var autosave_options := [
+		[0, _text("settings.autosave_off")],
+		[5, _text("settings.autosave_5")],
+		[10, _text("settings.autosave_10")],
+		[15, _text("settings.autosave_15")],
+		[30, _text("settings.autosave_30")]
+	]
+	for i in range(autosave_options.size()):
+		autosave_select.add_item(String(autosave_options[i][1]))
+		autosave_select.set_item_metadata(i, int(autosave_options[i][0]))
+	_select_option_by_metadata(autosave_select, settings_autosave_interval)
+	autosave_select.item_selected.connect(_on_autosave_selected.bind(autosave_select))
+	box.add_child(autosave_select)
+
+	box.add_child(_settings_label(_text("settings.measurement_system")))
+	var measurement_select := _settings_option_button()
+	measurement_select.add_item(_text("settings.metric"))
+	measurement_select.set_item_metadata(0, "metric")
+	measurement_select.add_item(_text("settings.imperial"))
+	measurement_select.set_item_metadata(1, "imperial")
+	_select_option_by_metadata(measurement_select, settings_measurement_system)
+	measurement_select.item_selected.connect(_on_measurement_selected.bind(measurement_select))
+	box.add_child(measurement_select)
+
+	box.add_child(_settings_checkbox(_text("settings.tutorial_hints"), settings_tutorial_hints, _on_tutorial_hints_toggled))
+	box.add_child(_settings_checkbox(_text("settings.pause_on_focus_loss"), settings_pause_on_focus_loss, _on_pause_on_focus_loss_toggled))
+	box.add_child(_settings_checkbox(_text("settings.confirm_major_actions"), settings_confirm_major_actions, _on_confirm_major_actions_toggled))
+
 	return box
 
 
 func _settings_display_tab() -> Control:
 	var box := _settings_tab(_text("settings.display"))
 
+	box.add_child(_settings_label(_text("settings.monitor")))
+	var monitor_select := _settings_option_button()
+	for screen in range(maxi(DisplayServer.get_screen_count(), 1)):
+		var screen_size := DisplayServer.screen_get_size(screen)
+		monitor_select.add_item(_text("settings.monitor_label", {
+			"number": screen + 1,
+			"width": screen_size.x,
+			"height": screen_size.y
+		}))
+		monitor_select.set_item_metadata(screen, screen)
+	_select_option_by_metadata(monitor_select, settings_monitor)
+	monitor_select.item_selected.connect(_on_monitor_selected.bind(monitor_select))
+	box.add_child(monitor_select)
+
 	box.add_child(_settings_label(_text("settings.window_mode")))
-	var mode_select := OptionButton.new()
+	var mode_select := _settings_option_button()
 	var modes := [
 		["windowed", _text("settings.windowed")],
 		["borderless", _text("settings.borderless")],
@@ -387,22 +524,44 @@ func _settings_display_tab() -> Control:
 	box.add_child(mode_select)
 
 	box.add_child(_settings_label(_text("settings.resolution")))
-	var resolution_select := OptionButton.new()
-	var resolutions := [Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3840, 2160)]
+	var resolution_select := _settings_option_button()
+	var resolutions := _available_resolutions()
 	for i in range(resolutions.size()):
 		var resolution: Vector2i = resolutions[i]
-		resolution_select.add_item("%d x %d" % [resolution.x, resolution.y])
+		var label := "%d x %d" % [resolution.x, resolution.y]
+		if resolution == _screen_size_for(settings_monitor):
+			label = _text("settings.native_resolution", {"width": resolution.x, "height": resolution.y})
+		resolution_select.add_item(label)
 		resolution_select.set_item_metadata(i, resolution)
 		if resolution == settings_resolution:
 			resolution_select.selected = i
 	resolution_select.item_selected.connect(_on_resolution_selected.bind(resolution_select))
 	box.add_child(resolution_select)
 
-	var vsync_check := CheckBox.new()
-	vsync_check.text = _text("settings.vsync")
-	vsync_check.button_pressed = settings_vsync
-	vsync_check.toggled.connect(_on_vsync_toggled)
-	box.add_child(vsync_check)
+	box.add_child(_settings_label(_text("settings.frame_rate_cap")))
+	var fps_select := _settings_option_button()
+	var fps_options := [0, 30, 60, 120, 144, 165, 240]
+	for i in range(fps_options.size()):
+		var fps := int(fps_options[i])
+		fps_select.add_item(_text("settings.frame_rate_unlimited") if fps == 0 else "%d FPS" % fps)
+		fps_select.set_item_metadata(i, fps)
+	_select_option_by_metadata(fps_select, settings_frame_rate_cap)
+	fps_select.item_selected.connect(_on_frame_rate_selected.bind(fps_select))
+	box.add_child(fps_select)
+
+	box.add_child(_settings_label(_text("settings.ui_scale")))
+	var scale_select := _settings_option_button()
+	var scales := [80, 90, 100, 110, 125, 150]
+	for i in range(scales.size()):
+		var scale := int(scales[i])
+		scale_select.add_item("%d%%" % scale)
+		scale_select.set_item_metadata(i, scale)
+	_select_option_by_metadata(scale_select, settings_ui_scale)
+	scale_select.item_selected.connect(_on_ui_scale_selected.bind(scale_select))
+	box.add_child(scale_select)
+
+	box.add_child(_settings_checkbox(_text("settings.vsync"), settings_vsync, _on_vsync_toggled))
+	box.add_child(_settings_checkbox(_text("settings.cursor_confined"), settings_cursor_confined, _on_cursor_confined_toggled))
 
 	return box
 
@@ -411,12 +570,13 @@ func _settings_graphics_tab() -> Control:
 	var box := _settings_tab(_text("settings.graphics"))
 
 	box.add_child(_settings_label(_text("settings.graphics_preset")))
-	var preset_select := OptionButton.new()
+	var preset_select := _settings_option_button()
 	var presets := [
 		["low", _text("settings.low")],
 		["medium", _text("settings.medium")],
 		["high", _text("settings.high")],
-		["ultra", _text("settings.ultra")]
+		["ultra", _text("settings.ultra")],
+		["custom", _text("settings.custom")]
 	]
 	for i in range(presets.size()):
 		preset_select.add_item(String(presets[i][1]))
@@ -426,20 +586,56 @@ func _settings_graphics_tab() -> Control:
 	preset_select.item_selected.connect(_on_graphics_preset_selected.bind(preset_select))
 	box.add_child(preset_select)
 
-	box.add_child(_settings_check("strategic_lighting", _text("settings.strategic_lighting"), true))
-	box.add_child(_settings_check("map_effects", _text("settings.map_effects"), true))
-	box.add_child(_settings_check("unit_shadows", _text("settings.unit_shadows"), settings_graphics_preset in ["high", "ultra"]))
-	box.add_child(_settings_check("post_processing", _text("settings.post_processing"), settings_graphics_preset in ["medium", "high", "ultra"]))
-	box.add_child(_settings_check("water_reflections", _text("settings.water_reflections"), settings_graphics_preset == "ultra"))
+	box.add_child(_graphics_choice("map_texture_quality", _text("settings.map_texture_quality"), [
+		["low", _text("settings.low")],
+		["medium", _text("settings.medium")],
+		["high", _text("settings.high")],
+		["ultra", _text("settings.ultra")]
+	], preset_select))
+	box.add_child(_graphics_choice("anti_aliasing", _text("settings.anti_aliasing"), [
+		["off", _text("settings.off")],
+		["fxaa", "FXAA"],
+		["taa", "TAA"]
+	], preset_select))
+	box.add_child(_graphics_choice("effects_density", _text("settings.effects_density"), [
+		["low", _text("settings.low")],
+		["medium", _text("settings.medium")],
+		["high", _text("settings.high")],
+		["ultra", _text("settings.ultra")]
+	], preset_select))
+	box.add_child(_graphics_choice("shadow_quality", _text("settings.shadow_quality"), [
+		["off", _text("settings.off")],
+		["low", _text("settings.low")],
+		["medium", _text("settings.medium")],
+		["high", _text("settings.high")]
+	], preset_select))
+	box.add_child(_graphics_choice("camera_quality", _text("settings.camera_quality"), [
+		["flat", _text("settings.camera_flat")],
+		["standard", _text("settings.camera_standard")],
+		["cinematic", _text("settings.camera_cinematic")]
+	], preset_select))
+
+	box.add_child(_graphics_check("strategic_lighting", _text("settings.strategic_lighting"), preset_select))
+	box.add_child(_graphics_check("map_effects", _text("settings.map_effects"), preset_select))
+	box.add_child(_graphics_check("unit_shadows", _text("settings.unit_shadows"), preset_select))
+	box.add_child(_graphics_check("post_processing", _text("settings.post_processing"), preset_select))
+	box.add_child(_graphics_check("water_reflections", _text("settings.water_reflections"), preset_select))
+	box.add_child(_graphics_check("terrain_relief", _text("settings.terrain_relief"), preset_select))
+	box.add_child(_graphics_check("animated_markers", _text("settings.animated_markers"), preset_select))
+	box.add_child(_graphics_check("bloom", _text("settings.bloom"), preset_select))
+	box.add_child(_graphics_check("camera_tilt_effects", _text("settings.camera_tilt_effects"), preset_select))
+	box.add_child(_graphics_check("political_map_shading", _text("settings.political_map_shading"), preset_select))
 
 	return box
 
 
 func _settings_audio_tab() -> Control:
 	var box := _settings_tab(_text("settings.audio"))
+	audio_sub_sliders.clear()
+	audio_sub_labels.clear()
 
 	box.add_child(_settings_label(_text("settings.output_device")))
-	var device_select := OptionButton.new()
+	var device_select := _settings_option_button()
 	var devices := AudioServer.get_output_device_list()
 	if devices.is_empty():
 		devices = PackedStringArray(["Default"])
@@ -452,10 +648,28 @@ func _settings_audio_tab() -> Control:
 	device_select.item_selected.connect(_on_audio_device_selected.bind(device_select))
 	box.add_child(device_select)
 
-	box.add_child(_volume_slider(_text("settings.master_volume"), settings_master_volume, _on_master_volume_changed))
-	box.add_child(_volume_slider(_text("settings.music_volume"), settings_music_volume, _on_music_volume_changed))
-	box.add_child(_volume_slider(_text("settings.effects_volume"), settings_effects_volume, _on_effects_volume_changed))
-	box.add_child(_volume_slider(_text("settings.interface_volume"), settings_interface_volume, _on_interface_volume_changed))
+	box.add_child(_volume_slider("master", _text("settings.master_volume"), settings_master_volume, _on_master_volume_changed, 100.0))
+	box.add_child(_volume_slider("music", _text("settings.music_volume"), settings_music_volume, _on_music_volume_changed, settings_master_volume))
+	box.add_child(_volume_slider("effects", _text("settings.effects_volume"), settings_effects_volume, _on_effects_volume_changed, settings_master_volume))
+	box.add_child(_volume_slider("interface", _text("settings.interface_volume"), settings_interface_volume, _on_interface_volume_changed, settings_master_volume))
+
+	box.add_child(_settings_label(_text("settings.dynamic_range")))
+	var dynamic_range_select := _settings_option_button()
+	var ranges := [
+		["night", _text("settings.dynamic_range_night")],
+		["headphones", _text("settings.dynamic_range_headphones")],
+		["wide", _text("settings.dynamic_range_wide")]
+	]
+	for i in range(ranges.size()):
+		dynamic_range_select.add_item(String(ranges[i][1]))
+		dynamic_range_select.set_item_metadata(i, String(ranges[i][0]))
+	_select_option_by_metadata(dynamic_range_select, settings_dynamic_range)
+	dynamic_range_select.item_selected.connect(_on_dynamic_range_selected.bind(dynamic_range_select))
+	box.add_child(dynamic_range_select)
+
+	box.add_child(_settings_checkbox(_text("settings.mute_when_unfocused"), settings_mute_when_unfocused, _on_mute_when_unfocused_toggled))
+	box.add_child(_settings_checkbox(_text("settings.menu_music"), settings_menu_music, _on_menu_music_toggled))
+	box.add_child(_settings_checkbox(_text("settings.ui_feedback_sounds"), settings_ui_feedback_sounds, _on_ui_feedback_sounds_toggled))
 
 	return box
 
@@ -475,15 +689,60 @@ func _settings_label(text: String) -> Label:
 	return label
 
 
-func _settings_check(setting_id: String, text: String, enabled: bool) -> CheckBox:
+func _settings_option_button() -> OptionButton:
+	var option := OptionButton.new()
+	option.custom_minimum_size = Vector2(0, 36)
+	option.add_theme_font_size_override("font_size", 14)
+	if body_font:
+		option.add_theme_font_override("font", body_font)
+	option.add_theme_stylebox_override("normal", _style_box(Color(0.06, 0.09, 0.12, 0.90), Color(0.31, 0.39, 0.48, 0.80)))
+	option.add_theme_stylebox_override("hover", _style_box(Color(0.10, 0.14, 0.18, 0.94), Color.html("#80CFA9")))
+	option.add_theme_stylebox_override("pressed", _style_box(Color(0.07, 0.11, 0.14, 0.98), Color.html("#F4D35E")))
+	return option
+
+
+func _settings_checkbox(text: String, value: bool, callback: Callable = Callable()) -> CheckBox:
 	var check := CheckBox.new()
 	check.text = text
-	check.button_pressed = enabled
-	check.set_meta("setting_id", setting_id)
+	check.button_pressed = value
+	check.add_theme_font_size_override("font_size", 14)
+	if body_font:
+		check.add_theme_font_override("font", body_font)
+	check.add_theme_color_override("font_color", Color.html("#DCE6F4"))
+	if callback.is_valid():
+		check.toggled.connect(callback)
 	return check
 
 
-func _volume_slider(label_text: String, value: float, callback: Callable) -> Control:
+func _select_option_by_metadata(option: OptionButton, value: Variant) -> void:
+	for i in range(option.get_item_count()):
+		if option.get_item_metadata(i) == value:
+			option.selected = i
+			return
+
+
+func _graphics_choice(setting_id: String, label_text: String, choices: Array, preset_select: OptionButton) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	box.add_child(_settings_label(label_text))
+
+	var option := _settings_option_button()
+	for i in range(choices.size()):
+		option.add_item(String(choices[i][1]))
+		option.set_item_metadata(i, String(choices[i][0]))
+	_select_option_by_metadata(option, String(graphics_choice_settings.get(setting_id, "")))
+	option.item_selected.connect(_on_graphics_choice_selected.bind(setting_id, option, preset_select))
+	box.add_child(option)
+	return box
+
+
+func _graphics_check(setting_id: String, text: String, preset_select: OptionButton) -> CheckBox:
+	var check := _settings_checkbox(text, bool(graphics_bool_settings.get(setting_id, false)))
+	check.toggled.connect(_on_graphics_bool_changed.bind(setting_id, preset_select))
+	return check
+
+
+func _volume_slider(setting_id: String, label_text: String, value: float, callback: Callable, max_value: float) -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	var label := _settings_label("%s: %.0f%%" % [label_text, value])
@@ -491,38 +750,96 @@ func _volume_slider(label_text: String, value: float, callback: Callable) -> Con
 
 	var slider := HSlider.new()
 	slider.min_value = 0
-	slider.max_value = 100
+	slider.max_value = max_value
 	slider.step = 1
-	slider.value = value
+	slider.value = clampf(value, 0.0, max_value)
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slider.value_changed.connect(callback)
 	slider.value_changed.connect(func(new_value: float) -> void:
 		label.text = "%s: %.0f%%" % [label_text, new_value]
 	)
 	box.add_child(slider)
+	if setting_id != "master":
+		audio_sub_sliders[setting_id] = slider
+		audio_sub_labels[setting_id] = {
+			"label": label,
+			"text": label_text
+		}
 	return box
 
 
 func _on_language_selected(index: int, select: OptionButton) -> void:
 	current_language = String(select.get_item_metadata(index))
-	_show_settings_screen()
+	_show_settings_screen(0)
+
+
+func _on_autosave_selected(index: int, select: OptionButton) -> void:
+	settings_autosave_interval = int(select.get_item_metadata(index))
+
+
+func _on_measurement_selected(index: int, select: OptionButton) -> void:
+	settings_measurement_system = String(select.get_item_metadata(index))
+
+
+func _on_tutorial_hints_toggled(value: bool) -> void:
+	settings_tutorial_hints = value
+
+
+func _on_pause_on_focus_loss_toggled(value: bool) -> void:
+	settings_pause_on_focus_loss = value
+
+
+func _on_confirm_major_actions_toggled(value: bool) -> void:
+	settings_confirm_major_actions = value
+
+
+func _on_monitor_selected(index: int, select: OptionButton) -> void:
+	settings_monitor = int(select.get_item_metadata(index))
+	settings_resolution = _screen_size_for(settings_monitor)
+	_show_settings_screen(1)
 
 
 func _on_window_mode_selected(index: int, select: OptionButton) -> void:
 	settings_window_mode = String(select.get_item_metadata(index))
+	if settings_window_mode != "windowed":
+		settings_resolution = _screen_size_for(settings_monitor)
+	_show_settings_screen(1)
 
 
 func _on_resolution_selected(index: int, select: OptionButton) -> void:
 	settings_resolution = select.get_item_metadata(index)
 
 
+func _on_frame_rate_selected(index: int, select: OptionButton) -> void:
+	settings_frame_rate_cap = int(select.get_item_metadata(index))
+
+
+func _on_ui_scale_selected(index: int, select: OptionButton) -> void:
+	settings_ui_scale = int(select.get_item_metadata(index))
+
+
 func _on_vsync_toggled(value: bool) -> void:
 	settings_vsync = value
 
 
+func _on_cursor_confined_toggled(value: bool) -> void:
+	settings_cursor_confined = value
+
+
 func _on_graphics_preset_selected(index: int, select: OptionButton) -> void:
 	settings_graphics_preset = String(select.get_item_metadata(index))
-	_show_settings_screen()
+	_apply_graphics_preset(settings_graphics_preset)
+	_show_settings_screen(2)
+
+
+func _on_graphics_bool_changed(value: bool, setting_id: String, preset_select: OptionButton) -> void:
+	graphics_bool_settings[setting_id] = value
+	_mark_graphics_custom(preset_select)
+
+
+func _on_graphics_choice_selected(index: int, setting_id: String, select: OptionButton, preset_select: OptionButton) -> void:
+	graphics_choice_settings[setting_id] = String(select.get_item_metadata(index))
+	_mark_graphics_custom(preset_select)
 
 
 func _on_audio_device_selected(index: int, select: OptionButton) -> void:
@@ -531,22 +848,40 @@ func _on_audio_device_selected(index: int, select: OptionButton) -> void:
 
 func _on_master_volume_changed(value: float) -> void:
 	settings_master_volume = value
-	_set_bus_volume("Master", value)
+	_clamp_audio_to_master()
+	_refresh_audio_slider_limits()
+	_apply_audio_settings()
 
 
 func _on_music_volume_changed(value: float) -> void:
-	settings_music_volume = value
-	_set_bus_volume("Music", value)
+	settings_music_volume = minf(value, settings_master_volume)
+	_apply_audio_settings()
 
 
 func _on_effects_volume_changed(value: float) -> void:
-	settings_effects_volume = value
-	_set_bus_volume("Effects", value)
+	settings_effects_volume = minf(value, settings_master_volume)
+	_apply_audio_settings()
 
 
 func _on_interface_volume_changed(value: float) -> void:
-	settings_interface_volume = value
-	_set_bus_volume("Interface", value)
+	settings_interface_volume = minf(value, settings_master_volume)
+	_apply_audio_settings()
+
+
+func _on_dynamic_range_selected(index: int, select: OptionButton) -> void:
+	settings_dynamic_range = String(select.get_item_metadata(index))
+
+
+func _on_mute_when_unfocused_toggled(value: bool) -> void:
+	settings_mute_when_unfocused = value
+
+
+func _on_menu_music_toggled(value: bool) -> void:
+	settings_menu_music = value
+
+
+func _on_ui_feedback_sounds_toggled(value: bool) -> void:
+	settings_ui_feedback_sounds = value
 
 
 func _apply_all_settings() -> void:
@@ -556,25 +891,43 @@ func _apply_all_settings() -> void:
 
 
 func _apply_display_settings() -> void:
+	settings_monitor = clampi(settings_monitor, 0, maxi(DisplayServer.get_screen_count() - 1, 0))
+	DisplayServer.window_set_current_screen(settings_monitor)
 	match settings_window_mode:
 		"windowed":
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 			DisplayServer.window_set_size(settings_resolution)
 		"borderless":
+			settings_resolution = _screen_size_for(settings_monitor)
+			DisplayServer.window_set_size(settings_resolution)
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		"exclusive_fullscreen":
+			settings_resolution = _screen_size_for(settings_monitor)
+			DisplayServer.window_set_size(settings_resolution)
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if settings_vsync else DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = settings_frame_rate_cap
+	get_window().content_scale_factor = float(settings_ui_scale) / 100.0
+	Input.mouse_mode = Input.MOUSE_MODE_CONFINED if settings_cursor_confined and settings_window_mode != "windowed" else Input.MOUSE_MODE_VISIBLE
 
 
 func _apply_audio_settings() -> void:
+	_clamp_audio_to_master()
 	if settings_audio_device != "":
 		AudioServer.output_device = settings_audio_device
 	_set_bus_volume("Master", settings_master_volume)
-	_set_bus_volume("Music", settings_music_volume)
-	_set_bus_volume("Effects", settings_effects_volume)
-	_set_bus_volume("Interface", settings_interface_volume)
+	_set_child_bus_volume("Music", settings_music_volume)
+	_set_child_bus_volume("Effects", settings_effects_volume)
+	_set_child_bus_volume("Interface", settings_interface_volume)
+
+
+func _set_child_bus_volume(bus_name: String, absolute_value: float) -> void:
+	if settings_master_volume <= 0.0:
+		_set_bus_volume(bus_name, 0.0)
+		return
+	var relative_value := clampf((absolute_value / settings_master_volume) * 100.0, 0.0, 100.0)
+	_set_bus_volume(bus_name, relative_value)
 
 
 func _set_bus_volume(bus_name: String, value: float) -> void:
@@ -585,6 +938,152 @@ func _set_bus_volume(bus_name: String, value: float) -> void:
 		AudioServer.set_bus_name(bus_index, bus_name)
 	var linear_value := clampf(value / 100.0, 0.0, 1.0)
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(linear_value) if linear_value > 0.0 else -80.0)
+
+
+func _current_screen_size() -> Vector2i:
+	return _screen_size_for(DisplayServer.window_get_current_screen())
+
+
+func _screen_size_for(screen: int) -> Vector2i:
+	var screen_count := maxi(DisplayServer.get_screen_count(), 1)
+	var safe_screen := clampi(screen, 0, screen_count - 1)
+	var size := DisplayServer.screen_get_size(safe_screen)
+	if size.x <= 0 or size.y <= 0:
+		return Vector2i(1920, 1080)
+	return size
+
+
+func _available_resolutions() -> Array[Vector2i]:
+	var native := _screen_size_for(settings_monitor)
+	var resolutions: Array[Vector2i] = [
+		Vector2i(1280, 720),
+		Vector2i(1600, 900),
+		Vector2i(1920, 1080),
+		Vector2i(2560, 1440),
+		Vector2i(3200, 1800),
+		Vector2i(3840, 2160)
+	]
+	if not resolutions.has(native):
+		resolutions.append(native)
+	return resolutions
+
+
+func _apply_graphics_preset(preset: String) -> void:
+	if preset == "custom":
+		return
+
+	var bool_presets := {
+		"low": {
+			"strategic_lighting": false,
+			"map_effects": false,
+			"unit_shadows": false,
+			"post_processing": false,
+			"water_reflections": false,
+			"terrain_relief": false,
+			"animated_markers": false,
+			"bloom": false,
+			"camera_tilt_effects": false,
+			"political_map_shading": true
+		},
+		"medium": {
+			"strategic_lighting": true,
+			"map_effects": true,
+			"unit_shadows": false,
+			"post_processing": true,
+			"water_reflections": false,
+			"terrain_relief": true,
+			"animated_markers": true,
+			"bloom": false,
+			"camera_tilt_effects": false,
+			"political_map_shading": true
+		},
+		"high": {
+			"strategic_lighting": true,
+			"map_effects": true,
+			"unit_shadows": true,
+			"post_processing": true,
+			"water_reflections": false,
+			"terrain_relief": true,
+			"animated_markers": true,
+			"bloom": false,
+			"camera_tilt_effects": true,
+			"political_map_shading": true
+		},
+		"ultra": {
+			"strategic_lighting": true,
+			"map_effects": true,
+			"unit_shadows": true,
+			"post_processing": true,
+			"water_reflections": true,
+			"terrain_relief": true,
+			"animated_markers": true,
+			"bloom": true,
+			"camera_tilt_effects": true,
+			"political_map_shading": true
+		}
+	}
+	var choice_presets := {
+		"low": {
+			"map_texture_quality": "low",
+			"anti_aliasing": "off",
+			"effects_density": "low",
+			"shadow_quality": "off",
+			"camera_quality": "flat"
+		},
+		"medium": {
+			"map_texture_quality": "medium",
+			"anti_aliasing": "fxaa",
+			"effects_density": "medium",
+			"shadow_quality": "low",
+			"camera_quality": "standard"
+		},
+		"high": {
+			"map_texture_quality": "high",
+			"anti_aliasing": "fxaa",
+			"effects_density": "high",
+			"shadow_quality": "high",
+			"camera_quality": "standard"
+		},
+		"ultra": {
+			"map_texture_quality": "ultra",
+			"anti_aliasing": "taa",
+			"effects_density": "ultra",
+			"shadow_quality": "high",
+			"camera_quality": "cinematic"
+		}
+	}
+
+	for key in bool_presets[preset].keys():
+		graphics_bool_settings[key] = bool(bool_presets[preset][key])
+	for key in choice_presets[preset].keys():
+		graphics_choice_settings[key] = String(choice_presets[preset][key])
+
+
+func _mark_graphics_custom(preset_select: OptionButton) -> void:
+	settings_graphics_preset = "custom"
+	_select_option_by_metadata(preset_select, "custom")
+
+
+func _clamp_audio_to_master() -> void:
+	settings_music_volume = minf(settings_music_volume, settings_master_volume)
+	settings_effects_volume = minf(settings_effects_volume, settings_master_volume)
+	settings_interface_volume = minf(settings_interface_volume, settings_master_volume)
+
+
+func _refresh_audio_slider_limits() -> void:
+	var values := {
+		"music": settings_music_volume,
+		"effects": settings_effects_volume,
+		"interface": settings_interface_volume
+	}
+	for key in audio_sub_sliders.keys():
+		var slider: HSlider = audio_sub_sliders[key]
+		slider.max_value = settings_master_volume
+		slider.value = clampf(float(values.get(key, 0.0)), 0.0, settings_master_volume)
+		var label_data: Dictionary = audio_sub_labels.get(key, {})
+		var label: Label = label_data.get("label")
+		if label:
+			label.text = "%s: %.0f%%" % [String(label_data.get("text", "")), slider.value]
 
 
 func _quit_game() -> void:
@@ -693,11 +1192,15 @@ func _build_top_bar() -> Control:
 	title.text = "RED MERIDIAN"
 	title.add_theme_font_size_override("font_size", 25)
 	title.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	if title_font:
+		title.add_theme_font_override("font", title_font)
 	title_box.add_child(title)
 
 	var subtitle := Label.new()
 	subtitle.text = _text("game.subtitle")
 	subtitle.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.62))
+	if body_font:
+		subtitle.add_theme_font_override("font", body_font)
 	title_box.add_child(subtitle)
 
 	var spacer := Control.new()
@@ -1104,6 +1607,8 @@ func _section_title(text: String) -> Label:
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", 19)
 	label.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	if body_font:
+		label.add_theme_font_override("font", body_font)
 	return label
 
 
@@ -1111,7 +1616,10 @@ func _muted_label(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 14)
 	label.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.66))
+	if body_font:
+		label.add_theme_font_override("font", body_font)
 	return label
 
 
@@ -1124,6 +1632,8 @@ func _stat_row(name: String, value: String) -> Control:
 	right.text = value
 	right.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	right.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	if body_font:
+		right.add_theme_font_override("font", body_font)
 	row.add_child(right)
 	return row
 
@@ -1139,6 +1649,8 @@ func _progress_row(name: String, value: float, color: Color) -> Control:
 	var value_label := Label.new()
 	value_label.text = "%.0f%%" % value
 	value_label.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	if body_font:
+		value_label.add_theme_font_override("font", body_font)
 	row.add_child(value_label)
 	box.add_child(row)
 
@@ -1158,6 +1670,9 @@ func _decision_button(text: String, decision_id: String) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(0, 36)
+	button.add_theme_font_size_override("font_size", 14)
+	if body_font:
+		button.add_theme_font_override("font", body_font)
 	button.pressed.connect(_run_decision.bind(decision_id))
 	return button
 
