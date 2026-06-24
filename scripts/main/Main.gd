@@ -42,9 +42,8 @@ var settings_tutorial_hints := true
 var settings_confirm_major_actions := true
 var settings_show_tooltips := true
 var settings_edge_scrolling := true
-var settings_camera_pan_speed := "normal"
 var settings_auto_pause_events := true
-var settings_autosave_interval := 10
+var settings_autosave_interval := 7
 var settings_measurement_system := "metric"
 var settings_graphics_preset := "high"
 var graphics_bool_settings := {
@@ -62,6 +61,7 @@ var graphics_bool_settings := {
 var graphics_choice_settings := {
 	"map_texture_quality": "high",
 	"anti_aliasing": "fxaa",
+	"msaa_level": "4x",
 	"effects_density": "high",
 	"shadow_quality": "high",
 	"camera_quality": "standard"
@@ -78,6 +78,7 @@ var settings_dynamic_range := "wide"
 var settings_active_tab := 0
 var audio_sub_sliders: Dictionary = {}
 var audio_sub_labels: Dictionary = {}
+var settings_feedback_label: Label
 
 var date_label: Label
 var status_label: Label
@@ -421,11 +422,12 @@ func _show_about_screen() -> void:
 func _show_settings_screen(active_tab: int = -1) -> void:
 	current_screen = "settings"
 	paused = true
+	settings_feedback_label = null
 	if active_tab >= 0:
 		settings_active_tab = active_tab
 	_reset_scene()
 	var root := _build_menu_shell()
-	var panel := _make_translucent_panel(930, 0)
+	var panel := _make_translucent_panel(980, 0)
 	root.add_child(panel)
 
 	var box := VBoxContainer.new()
@@ -458,11 +460,19 @@ func _show_settings_screen(active_tab: int = -1) -> void:
 	var back_button := _menu_button(_text("common.back"), _show_main_menu)
 	actions.add_child(back_button)
 
+	var action_spacer := Control.new()
+	action_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(action_spacer)
+
+	settings_feedback_label = _settings_feedback_label("")
+	actions.add_child(settings_feedback_label)
+
 	root.add_child(_footer_label())
 
 
 func _settings_general_tab() -> Control:
 	var box := _settings_tab(_text("settings.general"))
+	box.add_child(_settings_section_label(_text("settings.general_gameplay")))
 	box.add_child(_settings_label(_text("settings.language")))
 
 	var language_select := _settings_option_button()
@@ -478,10 +488,9 @@ func _settings_general_tab() -> Control:
 	var autosave_select := _settings_option_button()
 	var autosave_options := [
 		[0, _text("settings.autosave_off")],
-		[5, _text("settings.autosave_5")],
-		[10, _text("settings.autosave_10")],
-		[15, _text("settings.autosave_15")],
-		[30, _text("settings.autosave_30")]
+		[1, _text("settings.autosave_daily")],
+		[7, _text("settings.autosave_weekly")],
+		[30, _text("settings.autosave_monthly")]
 	]
 	for i in range(autosave_options.size()):
 		autosave_select.add_item(String(autosave_options[i][1]))
@@ -489,6 +498,7 @@ func _settings_general_tab() -> Control:
 	_select_option_by_metadata(autosave_select, settings_autosave_interval)
 	autosave_select.item_selected.connect(_on_autosave_selected.bind(autosave_select))
 	box.add_child(autosave_select)
+	box.add_child(_settings_hint(_text("settings.autosave_hint")))
 
 	box.add_child(_settings_label(_text("settings.measurement_system")))
 	var measurement_select := _settings_option_button()
@@ -500,26 +510,15 @@ func _settings_general_tab() -> Control:
 	measurement_select.item_selected.connect(_on_measurement_selected.bind(measurement_select))
 	box.add_child(measurement_select)
 
+	box.add_child(_settings_section_label(_text("settings.general_interface")))
 	box.add_child(_settings_checkbox(_text("settings.tutorial_hints"), settings_tutorial_hints, _on_tutorial_hints_toggled))
-	box.add_child(_settings_checkbox(_text("settings.pause_on_focus_loss"), settings_pause_on_focus_loss, _on_pause_on_focus_loss_toggled))
 	box.add_child(_settings_checkbox(_text("settings.confirm_major_actions"), settings_confirm_major_actions, _on_confirm_major_actions_toggled))
 	box.add_child(_settings_checkbox(_text("settings.show_tooltips"), settings_show_tooltips, _on_show_tooltips_toggled))
 	box.add_child(_settings_checkbox(_text("settings.edge_scrolling"), settings_edge_scrolling, _on_edge_scrolling_toggled))
-	box.add_child(_settings_checkbox(_text("settings.auto_pause_events"), settings_auto_pause_events, _on_auto_pause_events_toggled))
 
-	box.add_child(_settings_label(_text("settings.camera_pan_speed")))
-	var camera_speed_select := _settings_option_button()
-	var speeds := [
-		["slow", _text("settings.camera_speed_slow")],
-		["normal", _text("settings.camera_speed_normal")],
-		["fast", _text("settings.camera_speed_fast")]
-	]
-	for i in range(speeds.size()):
-		camera_speed_select.add_item(String(speeds[i][1]))
-		camera_speed_select.set_item_metadata(i, String(speeds[i][0]))
-	_select_option_by_metadata(camera_speed_select, settings_camera_pan_speed)
-	camera_speed_select.item_selected.connect(_on_camera_pan_speed_selected.bind(camera_speed_select))
-	box.add_child(camera_speed_select)
+	box.add_child(_settings_section_label(_text("settings.general_pause")))
+	box.add_child(_settings_checkbox(_text("settings.pause_on_focus_loss"), settings_pause_on_focus_loss, _on_pause_on_focus_loss_toggled))
+	box.add_child(_settings_checkbox(_text("settings.auto_pause_events"), settings_auto_pause_events, _on_auto_pause_events_toggled))
 
 	return box
 
@@ -530,7 +529,7 @@ func _settings_display_tab() -> Control:
 	box.add_child(_settings_label(_text("settings.monitor")))
 	var monitor_select := _settings_option_button()
 	for screen in range(maxi(DisplayServer.get_screen_count(), 1)):
-		var screen_size := DisplayServer.screen_get_size(screen)
+		var screen_size := _screen_size_for(screen)
 		monitor_select.add_item(_text("settings.monitor_label", {
 			"number": screen + 1,
 			"name": _screen_name_for(screen),
@@ -552,8 +551,7 @@ func _settings_display_tab() -> Control:
 	for i in range(modes.size()):
 		mode_select.add_item(String(modes[i][1]))
 		mode_select.set_item_metadata(i, String(modes[i][0]))
-		if String(modes[i][0]) == settings_window_mode:
-			mode_select.selected = i
+	_select_option_by_metadata(mode_select, settings_window_mode)
 	mode_select.item_selected.connect(_on_window_mode_selected.bind(mode_select))
 	box.add_child(mode_select)
 
@@ -563,12 +561,11 @@ func _settings_display_tab() -> Control:
 	for i in range(resolutions.size()):
 		var resolution: Vector2i = resolutions[i]
 		var label := "%d x %d" % [resolution.x, resolution.y]
-		if resolution == _screen_size_for(settings_monitor):
+		if i == 0:
 			label = _text("settings.native_resolution", {"width": resolution.x, "height": resolution.y})
 		resolution_select.add_item(label)
 		resolution_select.set_item_metadata(i, resolution)
-		if resolution == settings_resolution:
-			resolution_select.selected = i
+	_select_option_by_metadata(resolution_select, settings_resolution)
 	resolution_select.item_selected.connect(_on_resolution_selected.bind(resolution_select))
 	box.add_child(resolution_select)
 
@@ -629,8 +626,16 @@ func _settings_graphics_tab() -> Control:
 	box.add_child(_graphics_choice("anti_aliasing", _text("settings.anti_aliasing"), [
 		["off", _text("settings.off")],
 		["fxaa", "FXAA"],
-		["taa", "TAA"]
+		["smaa", "SMAA"],
+		["taa", "TAA"],
+		["msaa", "MSAA"]
 	], preset_select))
+	if String(graphics_choice_settings.get("anti_aliasing", "")) == "msaa":
+		box.add_child(_graphics_choice("msaa_level", _text("settings.msaa_level"), [
+			["2x", "MSAA 2x"],
+			["4x", "MSAA 4x"],
+			["8x", "MSAA 8x"]
+		], preset_select))
 	box.add_child(_graphics_choice("effects_density", _text("settings.effects_density"), [
 		["low", _text("settings.low")],
 		["medium", _text("settings.medium")],
@@ -735,15 +740,57 @@ func _settings_label(text: String) -> Label:
 	return label
 
 
+func _settings_section_label(text: String) -> Label:
+	var label := Label.new()
+	label.text = text.to_upper()
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", Color.html("#F4D35E"))
+	if body_font:
+		label.add_theme_font_override("font", body_font)
+	return label
+
+
+func _settings_hint(text: String) -> Label:
+	var label := _muted_label(text)
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.92, 0.62))
+	return label
+
+
+func _settings_feedback_label(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.visible = not text.is_empty()
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_color_override("font_color", Color.html("#80CFA9"))
+	if body_font:
+		label.add_theme_font_override("font", body_font)
+	return label
+
+
 func _settings_option_button() -> OptionButton:
 	var option := OptionButton.new()
 	option.custom_minimum_size = Vector2(0, 36)
 	option.add_theme_font_size_override("font_size", 14)
 	if body_font:
 		option.add_theme_font_override("font", body_font)
-	option.add_theme_stylebox_override("normal", _style_box(Color(0.06, 0.09, 0.12, 0.90), Color(0.31, 0.39, 0.48, 0.80)))
-	option.add_theme_stylebox_override("hover", _style_box(Color(0.10, 0.14, 0.18, 0.94), Color.html("#80CFA9")))
-	option.add_theme_stylebox_override("pressed", _style_box(Color(0.07, 0.11, 0.14, 0.98), Color.html("#F4D35E")))
+	option.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	option.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
+	option.add_theme_color_override("font_pressed_color", Color.html("#F4D35E"))
+	option.add_theme_stylebox_override("normal", _style_box(Color(0.04, 0.08, 0.11, 0.94), Color(0.36, 0.46, 0.56, 0.88)))
+	option.add_theme_stylebox_override("hover", _style_box(Color(0.07, 0.13, 0.16, 0.96), Color.html("#80CFA9")))
+	option.add_theme_stylebox_override("pressed", _style_box(Color(0.05, 0.10, 0.13, 0.98), Color.html("#F4D35E")))
+
+	var popup := option.get_popup()
+	popup.add_theme_font_size_override("font_size", 14)
+	if body_font:
+		popup.add_theme_font_override("font", body_font)
+	popup.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	popup.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
+	popup.add_theme_color_override("font_disabled_color", Color(0.78, 0.84, 0.92, 0.46))
+	popup.add_theme_stylebox_override("panel", _style_box(Color(0.06, 0.08, 0.10, 0.98), Color(0.32, 0.40, 0.48, 0.90)))
+	popup.add_theme_stylebox_override("hover", _style_box(Color(0.12, 0.18, 0.20, 0.98), Color.html("#F4D35E")))
 	return option
 
 
@@ -755,16 +802,21 @@ func _settings_checkbox(text: String, value: bool, callback: Callable = Callable
 	if body_font:
 		check.add_theme_font_override("font", body_font)
 	check.add_theme_color_override("font_color", Color.html("#DCE6F4"))
+	check.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
+	check.add_theme_color_override("font_pressed_color", Color.html("#F4D35E"))
 	if callback.is_valid():
 		check.toggled.connect(callback)
 	return check
 
 
-func _select_option_by_metadata(option: OptionButton, value: Variant) -> void:
+func _select_option_by_metadata(option: OptionButton, value: Variant) -> bool:
 	for i in range(option.get_item_count()):
 		if option.get_item_metadata(i) == value:
-			option.selected = i
-			return
+			option.select(i)
+			return true
+	if option.get_item_count() > 0:
+		option.select(0)
+	return false
 
 
 func _graphics_choice(setting_id: String, label_text: String, choices: Array, preset_select: OptionButton) -> Control:
@@ -857,10 +909,6 @@ func _on_auto_pause_events_toggled(value: bool) -> void:
 	settings_auto_pause_events = value
 
 
-func _on_camera_pan_speed_selected(index: int, select: OptionButton) -> void:
-	settings_camera_pan_speed = String(select.get_item_metadata(index))
-
-
 func _on_monitor_selected(index: int, select: OptionButton) -> void:
 	settings_monitor = int(select.get_item_metadata(index))
 	settings_resolution = _screen_size_for(settings_monitor)
@@ -869,8 +917,6 @@ func _on_monitor_selected(index: int, select: OptionButton) -> void:
 
 func _on_window_mode_selected(index: int, select: OptionButton) -> void:
 	settings_window_mode = String(select.get_item_metadata(index))
-	if settings_window_mode != "windowed":
-		settings_resolution = _screen_size_for(settings_monitor)
 	_show_settings_screen(1)
 
 
@@ -909,6 +955,8 @@ func _on_graphics_bool_changed(value: bool, setting_id: String, preset_select: O
 func _on_graphics_choice_selected(index: int, setting_id: String, select: OptionButton, preset_select: OptionButton) -> void:
 	graphics_choice_settings[setting_id] = String(select.get_item_metadata(index))
 	_mark_graphics_custom(preset_select)
+	if setting_id == "anti_aliasing":
+		_show_settings_screen(2)
 
 
 func _on_audio_device_selected(index: int, select: OptionButton) -> void:
@@ -959,7 +1007,13 @@ func _on_ui_feedback_sounds_toggled(value: bool) -> void:
 func _apply_all_settings() -> void:
 	_apply_display_settings()
 	_apply_audio_settings()
-	_show_message_screen(_text("settings.title"), _text("settings.applied"))
+	_show_settings_feedback()
+
+
+func _show_settings_feedback() -> void:
+	if is_instance_valid(settings_feedback_label):
+		settings_feedback_label.text = _text("settings.applied_inline")
+		settings_feedback_label.visible = true
 
 
 func _apply_display_settings() -> void:
@@ -970,11 +1024,9 @@ func _apply_display_settings() -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 			DisplayServer.window_set_size(settings_resolution)
 		"borderless":
-			settings_resolution = _screen_size_for(settings_monitor)
-			DisplayServer.window_set_size(settings_resolution)
+			DisplayServer.window_set_size(_screen_size_for(settings_monitor))
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		"exclusive_fullscreen":
-			settings_resolution = _screen_size_for(settings_monitor)
 			DisplayServer.window_set_size(settings_resolution)
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 
@@ -1036,7 +1088,7 @@ func _screen_name_for(screen: int) -> String:
 	if DisplayServer.has_method("screen_get_name"):
 		var detected_name = DisplayServer.call("screen_get_name", screen)
 		if typeof(detected_name) == TYPE_STRING:
-			var clean_name := String(detected_name).strip_edges()
+			var clean_name := _sanitize_display_text(String(detected_name))
 			if not clean_name.is_empty():
 				return clean_name
 
@@ -1048,9 +1100,19 @@ func _screen_name_for(screen: int) -> String:
 	return _text("settings.display_number", {"number": screen + 1})
 
 
+func _sanitize_display_text(value: String) -> String:
+	var clean_value := ""
+	for i in range(value.length()):
+		var code := value.unicode_at(i)
+		if code >= 32 and code != 127:
+			clean_value += value.substr(i, 1)
+	return clean_value.strip_edges()
+
+
 func _available_resolutions() -> Array[Vector2i]:
 	var native := _screen_size_for(settings_monitor)
 	var resolutions: Array[Vector2i] = [
+		native,
 		Vector2i(1024, 576),
 		Vector2i(1152, 648),
 		Vector2i(1280, 720),
@@ -1067,9 +1129,11 @@ func _available_resolutions() -> Array[Vector2i]:
 		Vector2i(3840, 1600),
 		Vector2i(3840, 2160)
 	]
-	if not resolutions.has(native):
-		resolutions.append(native)
-	return resolutions
+	var unique_resolutions: Array[Vector2i] = []
+	for resolution in resolutions:
+		if not unique_resolutions.has(resolution):
+			unique_resolutions.append(resolution)
+	return unique_resolutions
 
 
 func _apply_graphics_preset(preset: String) -> void:
@@ -1130,6 +1194,7 @@ func _apply_graphics_preset(preset: String) -> void:
 		"low": {
 			"map_texture_quality": "low",
 			"anti_aliasing": "off",
+			"msaa_level": "2x",
 			"effects_density": "low",
 			"shadow_quality": "off",
 			"camera_quality": "flat"
@@ -1137,20 +1202,23 @@ func _apply_graphics_preset(preset: String) -> void:
 		"medium": {
 			"map_texture_quality": "medium",
 			"anti_aliasing": "fxaa",
+			"msaa_level": "2x",
 			"effects_density": "medium",
 			"shadow_quality": "low",
 			"camera_quality": "standard"
 		},
 		"high": {
 			"map_texture_quality": "high",
-			"anti_aliasing": "fxaa",
+			"anti_aliasing": "taa",
+			"msaa_level": "4x",
 			"effects_density": "high",
 			"shadow_quality": "high",
 			"camera_quality": "standard"
 		},
 		"ultra": {
 			"map_texture_quality": "ultra",
-			"anti_aliasing": "taa",
+			"anti_aliasing": "msaa",
+			"msaa_level": "8x",
 			"effects_density": "ultra",
 			"shadow_quality": "high",
 			"camera_quality": "cinematic"

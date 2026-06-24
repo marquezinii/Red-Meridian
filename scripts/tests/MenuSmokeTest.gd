@@ -34,6 +34,24 @@ func _process(_delta: float) -> bool:
 				quit(1)
 				return false
 		6:
+			main_scene._show_settings_screen(1)
+			var blank_option := _find_blank_selected_option(main_scene)
+			if blank_option != "":
+				push_error("Settings option has an empty selected label: %s" % blank_option)
+				quit(1)
+				return false
+			main_scene.settings_window_mode = "borderless"
+			main_scene.settings_resolution = Vector2i(1920, 1080)
+			main_scene._apply_all_settings()
+			if main_scene.current_screen != "settings":
+				push_error("Apply opened a message screen instead of staying in settings.")
+				quit(1)
+				return false
+			if main_scene.settings_resolution != Vector2i(1920, 1080):
+				push_error("Borderless apply overwrote the selected resolution setting.")
+				quit(1)
+				return false
+		8:
 			main_scene._show_settings_screen(3)
 			main_scene.settings_master_volume = 100.0
 			main_scene.settings_music_volume = 90.0
@@ -54,13 +72,13 @@ func _process(_delta: float) -> bool:
 				push_error("Music volume was allowed above the master volume cap.")
 				quit(1)
 				return false
-		8:
-			main_scene._apply_all_settings()
 		10:
-			main_scene._show_about_screen()
+			main_scene._apply_all_settings()
 		12:
-			main_scene._start_single_player()
+			main_scene._show_about_screen()
 		14:
+			main_scene._start_single_player()
+		16:
 			if main_scene.current_screen != "game":
 				push_error("Single Player did not open the game screen.")
 				quit(1)
@@ -76,3 +94,18 @@ func _make_graphics_preset_select() -> OptionButton:
 		option.add_item(values[i])
 		option.set_item_metadata(i, values[i])
 	return option
+
+
+func _find_blank_selected_option(node: Node) -> String:
+	if node is OptionButton:
+		var option := node as OptionButton
+		var selected_index: int = option.selected
+		if selected_index < 0 or selected_index >= option.get_item_count():
+			return option.name
+		if option.get_item_text(selected_index).strip_edges().is_empty():
+			return option.name
+	for child in node.get_children():
+		var result := _find_blank_selected_option(child)
+		if result != "":
+			return result
+	return ""
