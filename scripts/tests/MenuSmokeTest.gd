@@ -77,6 +77,13 @@ func _initialize() -> void:
 	if main_scene.current_screen != "country_select":
 		_fail("New Game did not open the 1970 country selection screen.")
 		return
+	for entry in main_scene.campaign_countries:
+		if main_scene._texture_from_resource(String(entry.get("portrait_path", ""))) == null:
+			_fail("Campaign portrait asset failed to load: %s" % String(entry.get("portrait_path", "")))
+			return
+		if main_scene._texture_from_resource(String(entry.get("flag_path", ""))) == null:
+			_fail("Campaign flag asset failed to load: %s" % String(entry.get("flag_path", "")))
+			return
 	main_scene._select_campaign_country("USA")
 	if main_scene.campaign_selected_country_id != "USA":
 		_fail("Country selection did not store the selected campaign country.")

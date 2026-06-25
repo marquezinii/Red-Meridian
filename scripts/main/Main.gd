@@ -81,12 +81,14 @@ var settings_menu_music := true
 var settings_ui_feedback_sounds := true
 var settings_dynamic_range := "wide"
 var settings_active_tab := 0
+var settings_display_dirty := false
 var audio_sub_sliders: Dictionary = {}
 var audio_sub_labels: Dictionary = {}
 var settings_feedback_panel: PanelContainer
 var settings_feedback_label: Label
 var monitor_name_cache: Array[String] = []
 var monitor_name_cache_loaded := false
+var campaign_texture_cache: Dictionary = {}
 
 var date_label: Label
 var status_label: Label
@@ -271,7 +273,7 @@ func _show_main_menu() -> void:
 	root.add_child(_footer_label())
 
 
-func _build_menu_shell() -> VBoxContainer:
+func _build_menu_shell(top_padding: int = 78) -> VBoxContainer:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_add_menu_background()
 
@@ -290,7 +292,7 @@ func _build_menu_shell() -> VBoxContainer:
 	margin.add_child(root)
 
 	var top_spacer := Control.new()
-	top_spacer.custom_minimum_size = Vector2(0, 78)
+	top_spacer.custom_minimum_size = Vector2(0, top_padding)
 	root.add_child(top_spacer)
 
 	return root
@@ -421,26 +423,27 @@ func _show_country_selection_screen() -> void:
 	paused = true
 	_reset_scene()
 
-	var root := _build_menu_shell()
-	var panel := _make_translucent_panel(1180, 0)
+	var root := _build_menu_shell(18)
+	var panel := _make_translucent_panel(1360, 0)
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	root.add_child(panel)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
+	box.add_theme_constant_override("separation", 14)
 	panel.add_child(box)
 
 	box.add_child(_section_title(_text("country_select.title")))
 	box.add_child(_muted_label(_text("country_select.subtitle")))
 
 	var card_row := HBoxContainer.new()
-	card_row.add_theme_constant_override("separation", 10)
+	card_row.add_theme_constant_override("separation", 12)
 	box.add_child(card_row)
 	for entry in campaign_countries:
 		card_row.add_child(_campaign_country_card(entry))
 
 	var selected_entry := _selected_campaign_country()
 	var detail_row := HBoxContainer.new()
-	detail_row.add_theme_constant_override("separation", 12)
+	detail_row.add_theme_constant_override("separation", 14)
 	box.add_child(detail_row)
 	detail_row.add_child(_campaign_info_panel(selected_entry))
 	detail_row.add_child(_campaign_identity_panel(selected_entry))
@@ -459,13 +462,13 @@ func _campaign_country_card(entry: Dictionary) -> Button:
 	var country_id := String(entry.get("country_id", ""))
 	var selected := country_id == campaign_selected_country_id
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(176, 230)
+	button.custom_minimum_size = Vector2(188, 266)
 	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_stylebox_override("normal", _style_box(Color(0.04, 0.07, 0.09, 0.94), Color.html("#324557")))
-	button.add_theme_stylebox_override("hover", _style_box(Color(0.07, 0.12, 0.15, 0.96), Color.html("#80CFA9")))
-	button.add_theme_stylebox_override("pressed", _style_box(Color(0.04, 0.10, 0.12, 0.98), Color.html("#80CFA9")))
+	button.add_theme_stylebox_override("normal", _style_box(Color(0.035, 0.052, 0.070, 0.96), Color.html("#31465B")))
+	button.add_theme_stylebox_override("hover", _style_box(Color(0.060, 0.100, 0.122, 0.98), Color.html("#80CFA9")))
+	button.add_theme_stylebox_override("pressed", _style_box(Color(0.040, 0.092, 0.104, 0.98), Color.html("#C4B26A")))
 	if selected:
-		button.add_theme_stylebox_override("normal", _style_box(Color(0.06, 0.12, 0.13, 0.98), Color.html("#80CFA9")))
+		button.add_theme_stylebox_override("normal", _style_box(Color(0.055, 0.105, 0.118, 0.98), Color.html("#C4B26A")))
 	button.pressed.connect(_select_campaign_country.bind(country_id))
 
 	var margin := MarginContainer.new()
@@ -477,36 +480,100 @@ func _campaign_country_card(entry: Dictionary) -> Button:
 	button.add_child(margin)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 7)
+	box.add_theme_constant_override("separation", 8)
 	margin.add_child(box)
 
-	var portrait = LeaderPortraitScript.new()
-	portrait.custom_minimum_size = Vector2(136, 132)
-	portrait.initials = String(entry.get("portrait_initials", ""))
-	portrait.accent_color = Color.html(String(entry.get("color", "#80CFA9")))
-	box.add_child(portrait)
-
-	var flag = FlagSwatchScript.new()
-	flag.flag_id = country_id
-	flag.custom_minimum_size = Vector2(136, 44)
-	box.add_child(flag)
+	box.add_child(_campaign_portrait_control(entry, Vector2(148, 126), true))
+	box.add_child(_campaign_flag_control(entry, Vector2(148, 70)))
 
 	var name_label := Label.new()
 	name_label.text = _campaign_text(entry, "name")
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_label.add_theme_font_size_override("font_size", 15)
 	name_label.add_theme_color_override("font_color", Color.html("#E8EEF8"))
 	if body_font:
 		name_label.add_theme_font_override("font", body_font)
 	box.add_child(name_label)
+
+	var leader_label := Label.new()
+	leader_label.text = String(entry.get("leader", ""))
+	leader_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	leader_label.clip_text = true
+	leader_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	leader_label.add_theme_font_size_override("font_size", 11)
+	leader_label.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.62))
+	if body_font:
+		leader_label.add_theme_font_override("font", body_font)
+	box.add_child(leader_label)
 	_ignore_mouse_recursive(margin)
 
 	return button
 
 
+func _campaign_portrait_control(entry: Dictionary, minimum_size: Vector2, crop_to_frame: bool) -> Control:
+	var texture := _texture_from_resource(String(entry.get("portrait_path", "")))
+	if texture != null:
+		return _campaign_texture_frame(texture, minimum_size, crop_to_frame, Color(0.018, 0.026, 0.034, 0.98), Color(0.47, 0.58, 0.68, 0.86))
+
+	var portrait = LeaderPortraitScript.new()
+	portrait.custom_minimum_size = minimum_size
+	portrait.initials = String(entry.get("portrait_initials", ""))
+	portrait.accent_color = Color.html(String(entry.get("color", "#80CFA9")))
+	return portrait
+
+
+func _campaign_flag_control(entry: Dictionary, minimum_size: Vector2) -> Control:
+	var texture := _texture_from_resource(String(entry.get("flag_path", "")))
+	if texture != null:
+		return _campaign_texture_frame(texture, minimum_size, false, Color(0.015, 0.018, 0.022, 0.96), Color(0.48, 0.55, 0.62, 0.74))
+
+	var flag = FlagSwatchScript.new()
+	flag.flag_id = String(entry.get("country_id", ""))
+	flag.custom_minimum_size = minimum_size
+	return flag
+
+
+func _campaign_texture_frame(texture: Texture2D, minimum_size: Vector2, crop_to_frame: bool, bg_color: Color, border_color: Color) -> PanelContainer:
+	var frame := PanelContainer.new()
+	frame.custom_minimum_size = minimum_size
+	frame.add_theme_stylebox_override("panel", _style_box(bg_color, border_color))
+
+	var image := TextureRect.new()
+	image.texture = texture
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED if crop_to_frame else TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	image.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	frame.add_child(image)
+	return frame
+
+
+func _texture_from_resource(path: String) -> Texture2D:
+	if path.is_empty():
+		return null
+	if campaign_texture_cache.has(path):
+		var cached = campaign_texture_cache[path]
+		if cached is Texture2D:
+			return cached
+		return null
+
+	var image := Image.new()
+	var error := image.load(path)
+	if error != OK:
+		push_warning("Failed to load campaign texture: %s" % path)
+		campaign_texture_cache[path] = null
+		return null
+
+	var texture := ImageTexture.create_from_image(image)
+	campaign_texture_cache[path] = texture
+	return texture
+
+
 func _campaign_info_panel(entry: Dictionary) -> Control:
 	var panel := _make_panel()
-	panel.custom_minimum_size = Vector2(340, 0)
+	panel.custom_minimum_size = Vector2(360, 0)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	panel.add_child(box)
@@ -519,6 +586,7 @@ func _campaign_info_panel(entry: Dictionary) -> Control:
 	box.add_child(_campaign_info_row(_text("country_select.elections"), _campaign_text(entry, "elections")))
 	box.add_child(_campaign_info_row(_text("country_select.ruling_party"), String(entry.get("ruling_party", ""))))
 	box.add_child(_campaign_info_row(_text("country_select.bloc"), _campaign_text(entry, "bloc")))
+	box.add_child(_campaign_info_row(_text("country_select.capital"), String(entry.get("capital", ""))))
 	return panel
 
 
@@ -544,7 +612,7 @@ func _campaign_info_row(label_text: String, value_text: String) -> Control:
 
 func _campaign_identity_panel(entry: Dictionary) -> Control:
 	var panel := _make_panel()
-	panel.custom_minimum_size = Vector2(280, 0)
+	panel.custom_minimum_size = Vector2(310, 0)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	panel.add_child(box)
@@ -558,24 +626,23 @@ func _campaign_identity_panel(entry: Dictionary) -> Control:
 		name.add_theme_font_override("font", title_font)
 	box.add_child(name)
 
-	var flag = FlagSwatchScript.new()
-	flag.flag_id = String(entry.get("country_id", ""))
-	flag.custom_minimum_size = Vector2(240, 126)
-	box.add_child(flag)
+	box.add_child(_campaign_portrait_control(entry, Vector2(260, 164), true))
+	box.add_child(_campaign_flag_control(entry, Vector2(260, 104)))
 	box.add_child(_muted_label(_campaign_text(entry, "official_name")))
-	box.add_child(_muted_label("%s: %s" % [_text("country_select.capital"), String(entry.get("capital", ""))]))
-	box.add_child(_muted_label(_text("country_select.photo_note")))
 	return panel
 
 
 func _campaign_history_panel(entry: Dictionary) -> Control:
 	var panel := _make_panel()
-	panel.custom_minimum_size = Vector2(420, 0)
+	panel.custom_minimum_size = Vector2(560, 0)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	panel.add_child(box)
 	box.add_child(_section_title(_text("country_select.brief_history")))
-	box.add_child(_muted_label(_campaign_text(entry, "history")))
+	var history := _muted_label(_campaign_text(entry, "history"))
+	history.add_theme_font_size_override("font_size", 14)
+	history.add_theme_constant_override("line_spacing", 3)
+	box.add_child(history)
 	return panel
 
 
@@ -723,12 +790,13 @@ func _show_settings_screen(active_tab: int = -1) -> void:
 	var back_button := _menu_button(_text("common.back"), _show_main_menu)
 	actions.add_child(back_button)
 
+	_add_settings_feedback_toast(actions)
+
 	var action_spacer := Control.new()
 	action_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(action_spacer)
 
 	root.add_child(_footer_label())
-	_add_settings_feedback_toast()
 
 
 func _settings_general_tab() -> Control:
@@ -1025,19 +1093,15 @@ func _settings_hint(text: String) -> Label:
 	return label
 
 
-func _add_settings_feedback_toast() -> void:
+func _add_settings_feedback_toast(parent: Container) -> void:
 	settings_feedback_panel = PanelContainer.new()
 	settings_feedback_panel.name = "SettingsFeedbackToast"
-	settings_feedback_panel.visible = false
-	settings_feedback_panel.custom_minimum_size = Vector2(330, 54)
-	settings_feedback_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	settings_feedback_panel.offset_left = 58
-	settings_feedback_panel.offset_top = -102
-	settings_feedback_panel.offset_right = 388
-	settings_feedback_panel.offset_bottom = -48
-	settings_feedback_panel.pivot_offset = Vector2(165, 54)
-	settings_feedback_panel.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.10, 0.11, 0.96), Color.html("#80CFA9")))
-	add_child(settings_feedback_panel)
+	settings_feedback_panel.custom_minimum_size = Vector2(280, 42)
+	settings_feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	settings_feedback_panel.modulate.a = 0.0
+	settings_feedback_panel.pivot_offset = Vector2(140, 21)
+	settings_feedback_panel.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.10, 0.11, 0.92), Color.html("#80CFA9")))
+	parent.add_child(settings_feedback_panel)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 18)
@@ -1283,6 +1347,7 @@ func _on_auto_pause_events_toggled(value: bool) -> void:
 func _on_monitor_value_selected(value: Variant) -> void:
 	settings_monitor = int(value)
 	settings_resolution = _screen_size_for(settings_monitor)
+	settings_display_dirty = true
 	_show_settings_screen(1)
 
 
@@ -1292,6 +1357,7 @@ func _on_monitor_selected(index: int, select: OptionButton) -> void:
 
 func _on_window_mode_selected(index: int, select: OptionButton) -> void:
 	settings_window_mode = String(select.get_item_metadata(index))
+	settings_display_dirty = true
 	_show_settings_screen(1)
 
 
@@ -1301,22 +1367,27 @@ func _on_resolution_selected(index: int, select: OptionButton) -> void:
 
 func _on_resolution_value_selected(value: Variant) -> void:
 	settings_resolution = value
+	settings_display_dirty = true
 
 
 func _on_frame_rate_selected(index: int, select: OptionButton) -> void:
 	settings_frame_rate_cap = int(select.get_item_metadata(index))
+	settings_display_dirty = true
 
 
 func _on_ui_scale_selected(index: int, select: OptionButton) -> void:
 	settings_ui_scale = int(select.get_item_metadata(index))
+	settings_display_dirty = true
 
 
 func _on_vsync_toggled(value: bool) -> void:
 	settings_vsync = value
+	settings_display_dirty = true
 
 
 func _on_cursor_confined_toggled(value: bool) -> void:
 	settings_cursor_confined = value
+	settings_display_dirty = true
 	_apply_cursor_mode()
 
 
@@ -1384,7 +1455,9 @@ func _on_ui_feedback_sounds_toggled(value: bool) -> void:
 
 
 func _apply_all_settings() -> void:
-	_apply_display_settings()
+	if settings_display_dirty:
+		_apply_display_settings()
+		settings_display_dirty = false
 	_apply_audio_settings()
 	_show_settings_feedback()
 
@@ -1394,9 +1467,8 @@ func _show_settings_feedback() -> void:
 		return
 
 	settings_feedback_label.text = _text("settings.applied_inline")
-	settings_feedback_panel.visible = true
 	settings_feedback_panel.modulate.a = 0.0
-	settings_feedback_panel.scale = Vector2(0.92, 0.92)
+	settings_feedback_panel.scale = Vector2(0.96, 0.96)
 
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_CUBIC)
@@ -1405,10 +1477,6 @@ func _show_settings_feedback() -> void:
 	tween.parallel().tween_property(settings_feedback_panel, "scale", Vector2.ONE, 0.18)
 	tween.tween_interval(1.65)
 	tween.tween_property(settings_feedback_panel, "modulate:a", 0.0, 0.22)
-	tween.tween_callback(func() -> void:
-		if is_instance_valid(settings_feedback_panel):
-			settings_feedback_panel.visible = false
-	)
 
 
 func _apply_display_settings() -> void:

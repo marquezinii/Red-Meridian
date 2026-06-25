@@ -9,6 +9,8 @@
     "leader_title_en": "President",
     "leader_title_pt": "Presidente",
     "portrait_initials": "EGM",
+    "portrait_path": "res://assets/campaign/leaders/bra_medici.jpg",
+    "flag_path": "res://assets/campaign/flags/bra.png",
     "ideology_en": "Military authoritarianism",
     "ideology_pt": "Autoritarismo militar",
     "government_en": "Military regime",
@@ -20,8 +22,8 @@
     "bloc_pt": "Estado anticomunista alinhado ao Ocidente",
     "capital": "Brasilia",
     "color": "#4FA35D",
-    "history_en": "Brazil begins 1970 under the military dictatorship, with Médici presiding over rapid economic growth, censorship, internal security expansion, and intense political repression.",
-    "history_pt": "O Brasil começa 1970 sob a ditadura militar, com Médici presidindo um período de crescimento acelerado, censura, expansão da segurança interna e forte repressão política."
+    "history_en": "Brazil begins 1970 under the military dictatorship, with President Emílio Garrastazu Médici presiding over the harshest phase of the regime. The government presents rapid industrial growth and major infrastructure projects as a national miracle, while censorship, surveillance, torture, and political repression expand through the internal security apparatus. Strategically, Brazil is aligned with the anti-communist Western camp, but its generals seek more regional influence and a larger role in South Atlantic affairs.",
+    "history_pt": "O Brasil começa 1970 sob a ditadura militar, com o presidente Emílio Garrastazu Médici comandando a fase mais dura do regime. O governo vende o crescimento industrial acelerado e grandes obras de infraestrutura como um milagre nacional, enquanto censura, vigilância, tortura e repressão política se expandem pelo aparato de segurança interna. Estrategicamente, o Brasil está alinhado ao campo ocidental anticomunista, mas seus generais buscam mais influência regional e um papel maior no Atlântico Sul."
   },
   {
     "country_id": "USA",
@@ -33,6 +35,8 @@
     "leader_title_en": "President",
     "leader_title_pt": "Presidente",
     "portrait_initials": "RN",
+    "portrait_path": "res://assets/campaign/leaders/usa_nixon.jpg",
+    "flag_path": "res://assets/campaign/flags/usa.png",
     "ideology_en": "Conservatism and Cold War realism",
     "ideology_pt": "Conservadorismo e realismo da Guerra Fria",
     "government_en": "Federal presidential republic",
@@ -44,8 +48,8 @@
     "bloc_pt": "OTAN / Bloco ocidental",
     "capital": "Washington, D.C.",
     "color": "#4C7BD9",
-    "history_en": "The United States enters 1970 divided by Vietnam, civil unrest, and Cold War pressure. Nixon seeks leverage abroad while promising order and gradual withdrawal at home.",
-    "history_pt": "Os Estados Unidos entram em 1970 divididos pela Guerra do Vietnã, tensões sociais e pressão da Guerra Fria. Nixon busca vantagem externa enquanto promete ordem e retirada gradual."
+    "history_en": "The United States enters 1970 as the leading Western superpower, but its domestic front is strained by Vietnam, protest movements, racial tension, inflation, and distrust of federal power. Nixon promotes law and order at home while pursuing Vietnamization, strategic arms talks, and a more flexible Cold War diplomacy abroad. The country still has unmatched economic, naval, nuclear, and alliance power, but every overseas commitment now carries political cost.",
+    "history_pt": "Os Estados Unidos entram em 1970 como a principal superpotência ocidental, mas o front interno está pressionado pelo Vietnã, protestos, tensões raciais, inflação e desconfiança do poder federal. Nixon promove lei e ordem em casa enquanto busca vietnamização, negociações estratégicas de armamentos e uma diplomacia de Guerra Fria mais flexível no exterior. O país ainda possui poder econômico, naval, nuclear e diplomático sem rival, mas cada compromisso externo agora cobra um preço político."
   },
   {
     "country_id": "CHN",
@@ -57,6 +61,8 @@
     "leader_title_en": "Chairman of the Chinese Communist Party",
     "leader_title_pt": "Presidente do Partido Comunista Chinês",
     "portrait_initials": "MZ",
+    "portrait_path": "res://assets/campaign/leaders/chn_mao.jpg",
+    "flag_path": "res://assets/campaign/flags/chn.png",
     "ideology_en": "Maoism",
     "ideology_pt": "Maoismo",
     "government_en": "One-party socialist state",
@@ -68,8 +74,8 @@
     "bloc_pt": "Estado comunista revolucionário, em ruptura com a URSS",
     "capital": "Beijing",
     "color": "#C83737",
-    "history_en": "China in 1970 is still shaped by the Cultural Revolution and the Sino-Soviet split. Mao remains the central figure as Beijing stands isolated but strategically important.",
-    "history_pt": "A China de 1970 ainda é moldada pela Revolução Cultural e pela ruptura sino-soviética. Mao segue como figura central enquanto Pequim permanece isolada, mas estrategicamente crucial."
+    "history_en": "China in 1970 is still shaped by the Cultural Revolution, with Mao Zedong remaining the symbolic and political center of the state. The party, the army, and revolutionary committees compete for influence after years of upheaval, while the Sino-Soviet split turns the northern border into a strategic danger. Isolated from much of the world but impossible to ignore, Beijing is approaching a moment where hostility to Moscow may open unexpected diplomatic options.",
+    "history_pt": "A China de 1970 ainda é moldada pela Revolução Cultural, com Mao Zedong permanecendo como centro simbólico e político do Estado. O partido, o exército e os comitês revolucionários disputam influência após anos de turbulência, enquanto a ruptura sino-soviética transforma a fronteira norte em um risco estratégico. Isolada de boa parte do mundo, mas impossível de ignorar, Pequim se aproxima de um momento em que a rivalidade com Moscou pode abrir opções diplomáticas inesperadas."
   },
   {
     "country_id": "RUS",
@@ -81,6 +87,8 @@
     "leader_title_en": "General Secretary",
     "leader_title_pt": "Secretário-Geral",
     "portrait_initials": "LB",
+    "portrait_path": "res://assets/campaign/leaders/rus_brezhnev.jpg",
+    "flag_path": "res://assets/campaign/flags/rus.png",
     "ideology_en": "Marxism-Leninism",
     "ideology_pt": "Marxismo-leninismo",
     "government_en": "One-party socialist federation",
@@ -92,8 +100,8 @@
     "bloc_pt": "Pacto de Varsóvia / Bloco oriental",
     "capital": "Moscow",
     "color": "#B83A3A",
-    "history_en": "The Soviet Union enters the 1970s as a military superpower. Brezhnev consolidates party control while managing rivalry with the United States and the split with China.",
-    "history_pt": "A União Soviética entra nos anos 1970 como superpotência militar. Brezhnev consolida o controle do partido enquanto administra a rivalidade com os EUA e a ruptura com a China."
+    "history_en": "The Soviet Union enters the 1970s as a military superpower with global reach, a massive nuclear arsenal, and firm control over the Warsaw Pact after the shock of Prague in 1968. Brezhnev's leadership favors party stability, heavy industry, defense spending, and strategic parity with the United States. At the same time, the economy shows early signs of stagnation and the split with China forces Moscow to divide attention between Europe, Asia, and the developing world.",
+    "history_pt": "A União Soviética entra nos anos 1970 como uma superpotência militar de alcance global, com grande arsenal nuclear e controle firme sobre o Pacto de Varsóvia após o choque de Praga em 1968. A liderança de Brezhnev privilegia estabilidade partidária, indústria pesada, gastos de defesa e paridade estratégica com os Estados Unidos. Ao mesmo tempo, a economia mostra sinais iniciais de estagnação e a ruptura com a China obriga Moscou a dividir atenção entre Europa, Ásia e o mundo em desenvolvimento."
   },
   {
     "country_id": "JPN",
@@ -105,6 +113,8 @@
     "leader_title_en": "Prime Minister",
     "leader_title_pt": "Primeiro-ministro",
     "portrait_initials": "ES",
+    "portrait_path": "res://assets/campaign/leaders/jpn_sato.jpg",
+    "flag_path": "res://assets/campaign/flags/jpn.png",
     "ideology_en": "Conservative liberal democracy",
     "ideology_pt": "Democracia liberal conservadora",
     "government_en": "Parliamentary constitutional monarchy",
@@ -116,8 +126,8 @@
     "bloc_pt": "Aliado dos Estados Unidos",
     "capital": "Tokyo",
     "color": "#D9DDE8",
-    "history_en": "Japan in 1970 is an economic power rising fast, tied to the United States by security policy and preparing for the return of Okinawa under Satō's government.",
-    "history_pt": "O Japão de 1970 é uma potência econômica em rápida ascensão, ligada aos Estados Unidos pela política de segurança e preparando a devolução de Okinawa sob o governo Satō."
+    "history_en": "Japan in 1970 is a fast-rising industrial power, showcased by Expo '70 in Osaka and supported by export-led growth, advanced manufacturing, and close security ties with the United States. Prime Minister Eisaku Satō balances conservative dominance, pacifist constitutional limits, and negotiations over the reversion of Okinawa. Tokyo is not a military superpower, but its economy, technology, shipbuilding, and alliance position make it one of the most important strategic actors in Asia.",
+    "history_pt": "O Japão de 1970 é uma potência industrial em rápida ascensão, simbolizada pela Expo '70 em Osaka e sustentada por crescimento exportador, manufatura avançada e fortes laços de segurança com os Estados Unidos. O primeiro-ministro Eisaku Satō equilibra domínio conservador, limites pacifistas da constituição e negociações pela devolução de Okinawa. Tóquio não é uma superpotência militar, mas sua economia, tecnologia, construção naval e posição de aliado tornam o país um dos atores estratégicos mais importantes da Ásia."
   },
   {
     "country_id": "DEU",
@@ -129,6 +139,8 @@
     "leader_title_en": "Federal Chancellor",
     "leader_title_pt": "Chanceler Federal",
     "portrait_initials": "WB",
+    "portrait_path": "res://assets/campaign/leaders/deu_brandt.jpg",
+    "flag_path": "res://assets/campaign/flags/deu.png",
     "ideology_en": "Social democracy",
     "ideology_pt": "Social-democracia",
     "government_en": "Federal parliamentary republic",
@@ -140,7 +152,7 @@
     "bloc_pt": "OTAN / Bloco ocidental",
     "capital": "Bonn",
     "color": "#D8B44A",
-    "history_en": "West Germany begins 1970 under Brandt's social-liberal coalition. Ostpolitik seeks a new relationship with Eastern Europe while Bonn remains anchored in NATO.",
-    "history_pt": "A Alemanha Ocidental começa 1970 sob a coalizão social-liberal de Brandt. A Ostpolitik busca uma nova relação com o Leste Europeu enquanto Bonn permanece ancorada na OTAN."
+    "history_en": "West Germany begins 1970 under Willy Brandt's social-liberal coalition, wealthy, democratic, and firmly anchored in NATO and the European Community. Brandt's Ostpolitik seeks practical agreements with Eastern Europe and the German Democratic Republic without abandoning Bonn's Western commitments. The country is economically powerful but strategically constrained by division, allied expectations, domestic opposition, and the permanent pressure of the inner-German frontier.",
+    "history_pt": "A Alemanha Ocidental começa 1970 sob a coalizão social-liberal de Willy Brandt, rica, democrática e firmemente ancorada na OTAN e na Comunidade Europeia. A Ostpolitik de Brandt busca acordos práticos com o Leste Europeu e a Alemanha Oriental sem abandonar os compromissos ocidentais de Bonn. O país é economicamente poderoso, mas estrategicamente limitado pela divisão alemã, pelas expectativas dos aliados, pela oposição interna e pela pressão permanente da fronteira interalemã."
   }
 ]
