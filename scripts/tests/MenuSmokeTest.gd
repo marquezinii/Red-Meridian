@@ -70,8 +70,23 @@ func _initialize() -> void:
 	main_scene._apply_all_settings()
 	main_scene._show_about_screen()
 	main_scene._start_single_player()
+	if main_scene.current_screen != "single_player":
+		_fail("Single Player did not open the campaign menu.")
+		return
+	main_scene._show_country_selection_screen()
+	if main_scene.current_screen != "country_select":
+		_fail("New Game did not open the 1970 country selection screen.")
+		return
+	main_scene._select_campaign_country("USA")
+	if main_scene.campaign_selected_country_id != "USA":
+		_fail("Country selection did not store the selected campaign country.")
+		return
+	main_scene._start_new_campaign()
 	if main_scene.current_screen != "game":
-		_fail("Single Player did not open the game screen.")
+		_fail("Starting the campaign did not open the game screen.")
+		return
+	if main_scene.current_year != 1970 or main_scene.player_country_id != "USA":
+		_fail("New campaign did not initialize the 1970 start date and selected player country.")
 		return
 	quit()
 

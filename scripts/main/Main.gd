@@ -1,7 +1,10 @@
 extends Control
 
 const MapCanvasScript = preload("res://scripts/ui/MapCanvas.gd")
+const FlagSwatchScript = preload("res://scripts/ui/FlagSwatch.gd")
+const LeaderPortraitScript = preload("res://scripts/ui/LeaderPortrait.gd")
 const COUNTRY_DATA_PATH := "res://data/countries.json"
+const CAMPAIGN_COUNTRIES_1970_PATH := "res://data/campaign_countries_1970.json"
 const EVENTS_DATA_PATH := "res://data/events.json"
 const LOCALIZATION_DATA_PATH := "res://data/localization.json"
 const MENU_BACKGROUND_PATH := "res://assets/backgrounds/main_menu_background.png"
@@ -9,6 +12,7 @@ const TITLE_FONT_PATH := "res://assets/fonts/Orbitron-Variable.ttf"
 const BODY_FONT_PATH := "res://assets/fonts/Inter-Variable.ttf"
 
 var countries: Array = []
+var campaign_countries: Array = []
 var events: Array = []
 var localization: Dictionary = {}
 var current_screen := "menu"
@@ -17,6 +21,7 @@ var title_font: Font
 var body_font: Font
 var selected_country_id := ""
 var player_country_id := ""
+var campaign_selected_country_id := "BRA"
 var active_focuses: Dictionary = {}
 var event_cooldowns: Dictionary = {}
 var log_lines: Array[String] = []
@@ -98,6 +103,7 @@ func _ready() -> void:
 	_load_fonts()
 	_load_localization()
 	_load_countries()
+	_load_campaign_countries()
 	_load_events()
 	_initialize_runtime_settings()
 	if countries.is_empty():
@@ -142,6 +148,12 @@ func _process(delta: float) -> void:
 
 func _load_countries() -> void:
 	countries = _load_json_array(COUNTRY_DATA_PATH)
+
+
+func _load_campaign_countries() -> void:
+	campaign_countries = _load_json_array(CAMPAIGN_COUNTRIES_1970_PATH)
+	if not campaign_countries.is_empty():
+		campaign_selected_country_id = String(campaign_countries[0].get("country_id", "BRA"))
 
 
 func _load_events() -> void:
@@ -347,7 +359,8 @@ func _menu_button(text: String, callback: Callable) -> Button:
 	button.add_theme_color_override("font_color", Color.html("#E8EEF8"))
 	button.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
 	button.add_theme_color_override("font_pressed_color", Color.html("#F4D35E"))
-	button.pressed.connect(callback)
+	if callback.is_valid():
+		button.pressed.connect(callback)
 	return button
 
 
@@ -370,12 +383,258 @@ func _make_translucent_panel(width: int, height: int) -> PanelContainer:
 
 
 func _start_single_player() -> void:
+	_show_single_player_screen()
+
+
+func _show_single_player_screen() -> void:
+	current_screen = "single_player"
+	paused = true
+	_reset_scene()
+	var root := _build_menu_shell()
+	var panel := _make_translucent_panel(640, 0)
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+
+	box.add_child(_menu_title(_text("single.title"), _text("single.subtitle")))
+	var continue_button := _menu_button(_text("single.continue"), Callable())
+	continue_button.disabled = true
+	continue_button.tooltip_text = _text("single.no_save")
+	box.add_child(continue_button)
+	box.add_child(_menu_button(_text("single.new_game"), _show_country_selection_screen))
+	var load_button := _menu_button(_text("single.load_game"), Callable())
+	load_button.disabled = true
+	load_button.tooltip_text = _text("single.not_available")
+	box.add_child(load_button)
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 18)
+	box.add_child(spacer)
+	box.add_child(_menu_button(_text("common.back"), _show_main_menu))
+	root.add_child(_footer_label())
+
+
+func _show_country_selection_screen() -> void:
+	current_screen = "country_select"
+	paused = true
+	_reset_scene()
+
+	var root := _build_menu_shell()
+	var panel := _make_translucent_panel(1180, 0)
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+
+	box.add_child(_section_title(_text("country_select.title")))
+	box.add_child(_muted_label(_text("country_select.subtitle")))
+
+	var card_row := HBoxContainer.new()
+	card_row.add_theme_constant_override("separation", 10)
+	box.add_child(card_row)
+	for entry in campaign_countries:
+		card_row.add_child(_campaign_country_card(entry))
+
+	var selected_entry := _selected_campaign_country()
+	var detail_row := HBoxContainer.new()
+	detail_row.add_theme_constant_override("separation", 12)
+	box.add_child(detail_row)
+	detail_row.add_child(_campaign_info_panel(selected_entry))
+	detail_row.add_child(_campaign_identity_panel(selected_entry))
+	detail_row.add_child(_campaign_history_panel(selected_entry))
+
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
+	box.add_child(actions)
+	actions.add_child(_menu_button(_text("common.back"), _show_single_player_screen))
+	actions.add_child(_menu_button(_text("country_select.start"), _start_new_campaign))
+
+	root.add_child(_footer_label())
+
+
+func _campaign_country_card(entry: Dictionary) -> Button:
+	var country_id := String(entry.get("country_id", ""))
+	var selected := country_id == campaign_selected_country_id
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(176, 230)
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_stylebox_override("normal", _style_box(Color(0.04, 0.07, 0.09, 0.94), Color.html("#324557")))
+	button.add_theme_stylebox_override("hover", _style_box(Color(0.07, 0.12, 0.15, 0.96), Color.html("#80CFA9")))
+	button.add_theme_stylebox_override("pressed", _style_box(Color(0.04, 0.10, 0.12, 0.98), Color.html("#80CFA9")))
+	if selected:
+		button.add_theme_stylebox_override("normal", _style_box(Color(0.06, 0.12, 0.13, 0.98), Color.html("#80CFA9")))
+	button.pressed.connect(_select_campaign_country.bind(country_id))
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	button.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 7)
+	margin.add_child(box)
+
+	var portrait = LeaderPortraitScript.new()
+	portrait.custom_minimum_size = Vector2(136, 132)
+	portrait.initials = String(entry.get("portrait_initials", ""))
+	portrait.accent_color = Color.html(String(entry.get("color", "#80CFA9")))
+	box.add_child(portrait)
+
+	var flag = FlagSwatchScript.new()
+	flag.flag_id = country_id
+	flag.custom_minimum_size = Vector2(136, 44)
+	box.add_child(flag)
+
+	var name_label := Label.new()
+	name_label.text = _campaign_text(entry, "name")
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	if body_font:
+		name_label.add_theme_font_override("font", body_font)
+	box.add_child(name_label)
+	_ignore_mouse_recursive(margin)
+
+	return button
+
+
+func _campaign_info_panel(entry: Dictionary) -> Control:
+	var panel := _make_panel()
+	panel.custom_minimum_size = Vector2(340, 0)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	panel.add_child(box)
+
+	box.add_child(_section_title(_text("country_select.information")))
+	box.add_child(_campaign_info_row(_text("game.leader"), String(entry.get("leader", ""))))
+	box.add_child(_campaign_info_row(_text("country_select.title_label"), _campaign_text(entry, "leader_title")))
+	box.add_child(_campaign_info_row(_text("country_select.ideology"), _campaign_text(entry, "ideology")))
+	box.add_child(_campaign_info_row(_text("country_select.government"), _campaign_text(entry, "government")))
+	box.add_child(_campaign_info_row(_text("country_select.elections"), _campaign_text(entry, "elections")))
+	box.add_child(_campaign_info_row(_text("country_select.ruling_party"), String(entry.get("ruling_party", ""))))
+	box.add_child(_campaign_info_row(_text("country_select.bloc"), _campaign_text(entry, "bloc")))
+	return panel
+
+
+func _campaign_info_row(label_text: String, value_text: String) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+
+	var label := _muted_label(label_text)
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.92, 0.58))
+	box.add_child(label)
+
+	var value := Label.new()
+	value.text = value_text
+	value.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	value.add_theme_font_size_override("font_size", 14)
+	value.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	if body_font:
+		value.add_theme_font_override("font", body_font)
+	box.add_child(value)
+	return box
+
+
+func _campaign_identity_panel(entry: Dictionary) -> Control:
+	var panel := _make_panel()
+	panel.custom_minimum_size = Vector2(280, 0)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	panel.add_child(box)
+
+	var name := Label.new()
+	name.text = _campaign_text(entry, "name").to_upper()
+	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name.add_theme_font_size_override("font_size", 18)
+	name.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	if title_font:
+		name.add_theme_font_override("font", title_font)
+	box.add_child(name)
+
+	var flag = FlagSwatchScript.new()
+	flag.flag_id = String(entry.get("country_id", ""))
+	flag.custom_minimum_size = Vector2(240, 126)
+	box.add_child(flag)
+	box.add_child(_muted_label(_campaign_text(entry, "official_name")))
+	box.add_child(_muted_label("%s: %s" % [_text("country_select.capital"), String(entry.get("capital", ""))]))
+	box.add_child(_muted_label(_text("country_select.photo_note")))
+	return panel
+
+
+func _campaign_history_panel(entry: Dictionary) -> Control:
+	var panel := _make_panel()
+	panel.custom_minimum_size = Vector2(420, 0)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	panel.add_child(box)
+	box.add_child(_section_title(_text("country_select.brief_history")))
+	box.add_child(_muted_label(_campaign_text(entry, "history")))
+	return panel
+
+
+func _select_campaign_country(country_id: String) -> void:
+	campaign_selected_country_id = country_id
+	_show_country_selection_screen()
+
+
+func _start_new_campaign() -> void:
+	var entry := _selected_campaign_country()
+	if entry.is_empty():
+		return
+	var country_id := String(entry.get("country_id", selected_country_id))
+	if _country_by_id(country_id).is_empty():
+		country_id = selected_country_id
+
+	current_year = 1970
+	current_month = 1
+	current_day = 1
+	elapsed_days = 0
+	speed = 1
+	paused = true
+	global_tension = 52.0
+	active_focuses.clear()
+	event_cooldowns.clear()
+	log_lines.clear()
+	selected_country_id = country_id
+	player_country_id = country_id
+	_apply_campaign_leader_data()
+	_start_campaign_game()
+
+
+func _start_campaign_game() -> void:
 	current_screen = "game"
 	_reset_scene()
 	_build_layout()
 	if log_lines.is_empty():
 		_log(_text("log.ready"))
 	_refresh_all()
+
+
+func _apply_campaign_leader_data() -> void:
+	for entry in campaign_countries:
+		var country := _country_by_id(String(entry.get("country_id", "")))
+		if not country.is_empty():
+			country["leader"] = String(entry.get("leader", country.get("leader", "")))
+
+
+func _selected_campaign_country() -> Dictionary:
+	for entry in campaign_countries:
+		if String(entry.get("country_id", "")) == campaign_selected_country_id:
+			return entry
+	return campaign_countries[0] if not campaign_countries.is_empty() else {}
+
+
+func _campaign_text(entry: Dictionary, field: String) -> String:
+	var suffix := "_pt" if current_language == "pt_BR" else "_en"
+	var fallback_suffix := "_en" if suffix == "_pt" else "_pt"
+	return String(entry.get("%s%s" % [field, suffix], entry.get("%s%s" % [field, fallback_suffix], entry.get(field, ""))))
 
 
 func _show_multiplayer_notice() -> void:
@@ -1916,6 +2175,14 @@ func _clear_children(node: Node) -> void:
 		var child := node.get_child(0)
 		node.remove_child(child)
 		child.queue_free()
+
+
+func _ignore_mouse_recursive(node: Node) -> void:
+	if node is Control:
+		var control := node as Control
+		control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child in node.get_children():
+		_ignore_mouse_recursive(child)
 
 
 func _log(message: String) -> void:
