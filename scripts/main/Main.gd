@@ -78,7 +78,10 @@ var settings_dynamic_range := "wide"
 var settings_active_tab := 0
 var audio_sub_sliders: Dictionary = {}
 var audio_sub_labels: Dictionary = {}
+var settings_feedback_panel: PanelContainer
 var settings_feedback_label: Label
+var monitor_name_cache: Array[String] = []
+var monitor_name_cache_loaded := false
 
 var date_label: Label
 var status_label: Label
@@ -198,7 +201,7 @@ func _text(key: String, replacements: Dictionary = {}) -> String:
 	var fallback_table: Dictionary = localization.get("en", {})
 	var value := String(language_table.get(key, fallback_table.get(key, key)))
 	for replacement_key in replacements.keys():
-		value = value.replace("{%s}" % String(replacement_key), String(replacements[replacement_key]))
+		value = value.replace("{%s}" % str(replacement_key), str(replacements[replacement_key]))
 	return value
 
 
@@ -422,6 +425,7 @@ func _show_about_screen() -> void:
 func _show_settings_screen(active_tab: int = -1) -> void:
 	current_screen = "settings"
 	paused = true
+	settings_feedback_panel = null
 	settings_feedback_label = null
 	if active_tab >= 0:
 		settings_active_tab = active_tab
@@ -464,10 +468,8 @@ func _show_settings_screen(active_tab: int = -1) -> void:
 	action_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(action_spacer)
 
-	settings_feedback_label = _settings_feedback_label("")
-	actions.add_child(settings_feedback_label)
-
 	root.add_child(_footer_label())
+	_add_settings_feedback_toast()
 
 
 func _settings_general_tab() -> Control:
@@ -526,20 +528,16 @@ func _settings_general_tab() -> Control:
 func _settings_display_tab() -> Control:
 	var box := _settings_tab(_text("settings.display"))
 
-	box.add_child(_settings_label(_text("settings.monitor")))
-	var monitor_select := _settings_option_button()
+	var monitor_options := []
 	for screen in range(maxi(DisplayServer.get_screen_count(), 1)):
 		var screen_size := _screen_size_for(screen)
-		monitor_select.add_item(_text("settings.monitor_label", {
+		monitor_options.append([screen, _text("settings.monitor_label", {
 			"number": screen + 1,
 			"name": _screen_name_for(screen),
 			"width": screen_size.x,
 			"height": screen_size.y
-		}))
-		monitor_select.set_item_metadata(screen, screen)
-	_select_option_by_metadata(monitor_select, settings_monitor)
-	monitor_select.item_selected.connect(_on_monitor_selected.bind(monitor_select))
-	box.add_child(monitor_select)
+		})])
+	box.add_child(_settings_stepper(_text("settings.monitor"), monitor_options, settings_monitor, _on_monitor_value_selected))
 
 	box.add_child(_settings_label(_text("settings.window_mode")))
 	var mode_select := _settings_option_button()
@@ -555,19 +553,15 @@ func _settings_display_tab() -> Control:
 	mode_select.item_selected.connect(_on_window_mode_selected.bind(mode_select))
 	box.add_child(mode_select)
 
-	box.add_child(_settings_label(_text("settings.resolution")))
-	var resolution_select := _settings_option_button()
+	var resolution_options := []
 	var resolutions := _available_resolutions()
 	for i in range(resolutions.size()):
 		var resolution: Vector2i = resolutions[i]
 		var label := "%d x %d" % [resolution.x, resolution.y]
 		if i == 0:
 			label = _text("settings.native_resolution", {"width": resolution.x, "height": resolution.y})
-		resolution_select.add_item(label)
-		resolution_select.set_item_metadata(i, resolution)
-	_select_option_by_metadata(resolution_select, settings_resolution)
-	resolution_select.item_selected.connect(_on_resolution_selected.bind(resolution_select))
-	box.add_child(resolution_select)
+		resolution_options.append([resolution, label])
+	box.add_child(_settings_stepper(_text("settings.resolution"), resolution_options, settings_resolution, _on_resolution_value_selected))
 
 	box.add_child(_settings_label(_text("settings.frame_rate_cap")))
 	var fps_select := _settings_option_button()
@@ -729,8 +723,23 @@ func _wrap_settings_tab(content: VBoxContainer) -> ScrollContainer:
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.add_child(content)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 4)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(margin)
+	margin.add_child(content)
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var scrollbar := scroll.get_v_scroll_bar()
+	scrollbar.custom_minimum_size = Vector2(12, 0)
+	scrollbar.add_theme_stylebox_override("scroll", _style_box(Color(0.04, 0.07, 0.09, 0.72), Color(0.18, 0.24, 0.30, 0.55)))
+	scrollbar.add_theme_stylebox_override("grabber", _style_box(Color(0.27, 0.42, 0.48, 0.82), Color(0.42, 0.62, 0.66, 0.85)))
+	scrollbar.add_theme_stylebox_override("grabber_highlight", _style_box(Color(0.38, 0.62, 0.66, 0.95), Color.html("#80CFA9")))
+	scrollbar.add_theme_stylebox_override("grabber_pressed", _style_box(Color.html("#80CFA9"), Color.html("#CDEFE3")))
 	return scroll
 
 
@@ -744,7 +753,7 @@ func _settings_section_label(text: String) -> Label:
 	var label := Label.new()
 	label.text = text.to_upper()
 	label.add_theme_font_size_override("font_size", 12)
-	label.add_theme_color_override("font_color", Color.html("#F4D35E"))
+	label.add_theme_color_override("font_color", Color.html("#80CFA9"))
 	if body_font:
 		label.add_theme_font_override("font", body_font)
 	return label
@@ -757,16 +766,119 @@ func _settings_hint(text: String) -> Label:
 	return label
 
 
+func _add_settings_feedback_toast() -> void:
+	settings_feedback_panel = PanelContainer.new()
+	settings_feedback_panel.name = "SettingsFeedbackToast"
+	settings_feedback_panel.visible = false
+	settings_feedback_panel.custom_minimum_size = Vector2(330, 54)
+	settings_feedback_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	settings_feedback_panel.offset_left = 58
+	settings_feedback_panel.offset_top = -102
+	settings_feedback_panel.offset_right = 388
+	settings_feedback_panel.offset_bottom = -48
+	settings_feedback_panel.pivot_offset = Vector2(165, 54)
+	settings_feedback_panel.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.10, 0.11, 0.96), Color.html("#80CFA9")))
+	add_child(settings_feedback_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	settings_feedback_panel.add_child(margin)
+
+	settings_feedback_label = _settings_feedback_label("")
+	margin.add_child(settings_feedback_label)
+
+
 func _settings_feedback_label(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.visible = not text.is_empty()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	label.add_theme_font_size_override("font_size", 13)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 14)
 	label.add_theme_color_override("font_color", Color.html("#80CFA9"))
 	if body_font:
 		label.add_theme_font_override("font", body_font)
 	return label
+
+
+func _settings_stepper(label_text: String, options: Array, current_value: Variant, callback: Callable) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	box.add_child(_settings_label(label_text))
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	box.add_child(row)
+
+	var previous_button := _settings_step_button("<")
+	row.add_child(previous_button)
+
+	var value_panel := PanelContainer.new()
+	value_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	value_panel.custom_minimum_size = Vector2(0, 40)
+	value_panel.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.08, 0.11, 0.94), Color(0.36, 0.46, 0.56, 0.88)))
+	row.add_child(value_panel)
+
+	var value_label := Label.new()
+	value_label.clip_text = true
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	value_label.add_theme_font_size_override("font_size", 14)
+	value_label.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	if body_font:
+		value_label.add_theme_font_override("font", body_font)
+	value_panel.add_child(value_label)
+
+	var next_button := _settings_step_button(">")
+	row.add_child(next_button)
+
+	if options.is_empty():
+		value_label.text = _text("common.disabled")
+		previous_button.disabled = true
+		next_button.disabled = true
+		return box
+
+	var current_index := _option_index(options, current_value)
+	value_label.text = String(options[current_index][1])
+
+	previous_button.pressed.connect(func() -> void:
+		current_index = (current_index - 1 + options.size()) % options.size()
+		value_label.text = String(options[current_index][1])
+		callback.call(options[current_index][0])
+	)
+	next_button.pressed.connect(func() -> void:
+		current_index = (current_index + 1) % options.size()
+		value_label.text = String(options[current_index][1])
+		callback.call(options[current_index][0])
+	)
+
+	return box
+
+
+func _settings_step_button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(44, 40)
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", 16)
+	if body_font:
+		button.add_theme_font_override("font", body_font)
+	button.add_theme_color_override("font_color", Color.html("#DCE6F4"))
+	button.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
+	button.add_theme_color_override("font_pressed_color", Color.html("#80CFA9"))
+	button.add_theme_stylebox_override("normal", _style_box(Color(0.05, 0.09, 0.12, 0.95), Color(0.30, 0.42, 0.50, 0.78)))
+	button.add_theme_stylebox_override("hover", _style_box(Color(0.08, 0.15, 0.17, 0.98), Color.html("#80CFA9")))
+	button.add_theme_stylebox_override("pressed", _style_box(Color(0.04, 0.12, 0.13, 0.98), Color.html("#80CFA9")))
+	return button
+
+
+func _option_index(options: Array, current_value: Variant) -> int:
+	for i in range(options.size()):
+		if options[i][0] == current_value:
+			return i
+	return 0
 
 
 func _settings_option_button() -> OptionButton:
@@ -777,10 +889,10 @@ func _settings_option_button() -> OptionButton:
 		option.add_theme_font_override("font", body_font)
 	option.add_theme_color_override("font_color", Color.html("#E8EEF8"))
 	option.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
-	option.add_theme_color_override("font_pressed_color", Color.html("#F4D35E"))
+	option.add_theme_color_override("font_pressed_color", Color.html("#80CFA9"))
 	option.add_theme_stylebox_override("normal", _style_box(Color(0.04, 0.08, 0.11, 0.94), Color(0.36, 0.46, 0.56, 0.88)))
 	option.add_theme_stylebox_override("hover", _style_box(Color(0.07, 0.13, 0.16, 0.96), Color.html("#80CFA9")))
-	option.add_theme_stylebox_override("pressed", _style_box(Color(0.05, 0.10, 0.13, 0.98), Color.html("#F4D35E")))
+	option.add_theme_stylebox_override("pressed", _style_box(Color(0.05, 0.10, 0.13, 0.98), Color.html("#80CFA9")))
 
 	var popup := option.get_popup()
 	popup.add_theme_font_size_override("font_size", 14)
@@ -790,7 +902,7 @@ func _settings_option_button() -> OptionButton:
 	popup.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
 	popup.add_theme_color_override("font_disabled_color", Color(0.78, 0.84, 0.92, 0.46))
 	popup.add_theme_stylebox_override("panel", _style_box(Color(0.06, 0.08, 0.10, 0.98), Color(0.32, 0.40, 0.48, 0.90)))
-	popup.add_theme_stylebox_override("hover", _style_box(Color(0.12, 0.18, 0.20, 0.98), Color.html("#F4D35E")))
+	popup.add_theme_stylebox_override("hover", _style_box(Color(0.12, 0.18, 0.20, 0.98), Color.html("#80CFA9")))
 	return option
 
 
@@ -803,7 +915,7 @@ func _settings_checkbox(text: String, value: bool, callback: Callable = Callable
 		check.add_theme_font_override("font", body_font)
 	check.add_theme_color_override("font_color", Color.html("#DCE6F4"))
 	check.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
-	check.add_theme_color_override("font_pressed_color", Color.html("#F4D35E"))
+	check.add_theme_color_override("font_pressed_color", Color.html("#80CFA9"))
 	if callback.is_valid():
 		check.toggled.connect(callback)
 	return check
@@ -909,10 +1021,14 @@ func _on_auto_pause_events_toggled(value: bool) -> void:
 	settings_auto_pause_events = value
 
 
-func _on_monitor_selected(index: int, select: OptionButton) -> void:
-	settings_monitor = int(select.get_item_metadata(index))
+func _on_monitor_value_selected(value: Variant) -> void:
+	settings_monitor = int(value)
 	settings_resolution = _screen_size_for(settings_monitor)
 	_show_settings_screen(1)
+
+
+func _on_monitor_selected(index: int, select: OptionButton) -> void:
+	_on_monitor_value_selected(select.get_item_metadata(index))
 
 
 func _on_window_mode_selected(index: int, select: OptionButton) -> void:
@@ -921,7 +1037,11 @@ func _on_window_mode_selected(index: int, select: OptionButton) -> void:
 
 
 func _on_resolution_selected(index: int, select: OptionButton) -> void:
-	settings_resolution = select.get_item_metadata(index)
+	_on_resolution_value_selected(select.get_item_metadata(index))
+
+
+func _on_resolution_value_selected(value: Variant) -> void:
+	settings_resolution = value
 
 
 func _on_frame_rate_selected(index: int, select: OptionButton) -> void:
@@ -1011,9 +1131,25 @@ func _apply_all_settings() -> void:
 
 
 func _show_settings_feedback() -> void:
-	if is_instance_valid(settings_feedback_label):
-		settings_feedback_label.text = _text("settings.applied_inline")
-		settings_feedback_label.visible = true
+	if not is_instance_valid(settings_feedback_panel) or not is_instance_valid(settings_feedback_label):
+		return
+
+	settings_feedback_label.text = _text("settings.applied_inline")
+	settings_feedback_panel.visible = true
+	settings_feedback_panel.modulate.a = 0.0
+	settings_feedback_panel.scale = Vector2(0.92, 0.92)
+
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(settings_feedback_panel, "modulate:a", 1.0, 0.14)
+	tween.parallel().tween_property(settings_feedback_panel, "scale", Vector2.ONE, 0.18)
+	tween.tween_interval(1.65)
+	tween.tween_property(settings_feedback_panel, "modulate:a", 0.0, 0.22)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(settings_feedback_panel):
+			settings_feedback_panel.visible = false
+	)
 
 
 func _apply_display_settings() -> void:
@@ -1085,6 +1221,12 @@ func _screen_size_for(screen: int) -> Vector2i:
 
 
 func _screen_name_for(screen: int) -> String:
+	_load_monitor_name_cache()
+	if screen >= 0 and screen < monitor_name_cache.size():
+		var cached_name := _sanitize_display_text(monitor_name_cache[screen])
+		if not cached_name.is_empty():
+			return cached_name
+
 	if DisplayServer.has_method("screen_get_name"):
 		var detected_name = DisplayServer.call("screen_get_name", screen)
 		if typeof(detected_name) == TYPE_STRING:
@@ -1098,6 +1240,27 @@ func _screen_name_for(screen: int) -> String:
 	if screen == primary_screen:
 		return _text("settings.primary_monitor")
 	return _text("settings.display_number", {"number": screen + 1})
+
+
+func _load_monitor_name_cache() -> void:
+	if monitor_name_cache_loaded:
+		return
+	monitor_name_cache_loaded = true
+	monitor_name_cache.clear()
+
+	if OS.get_name() != "Windows":
+		return
+
+	var output: Array = []
+	var ps_command := "$monitors = Get-CimInstance -Namespace root\\wmi -ClassName WmiMonitorID; foreach ($monitor in $monitors) { $name = ($monitor.UserFriendlyName | Where-Object { $_ -ne 0 } | ForEach-Object { [char]$_ }) -join ''; if ($name) { $name } }"
+	var exit_code := OS.execute("powershell.exe", PackedStringArray(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_command]), output, true, false)
+	if exit_code != 0 or output.is_empty():
+		return
+
+	for line in String(output[0]).split("\n", false):
+		var clean_name := _sanitize_display_text(line)
+		if not clean_name.is_empty():
+			monitor_name_cache.append(clean_name)
 
 
 func _sanitize_display_text(value: String) -> String:
