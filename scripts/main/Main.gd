@@ -230,18 +230,17 @@ func _show_main_menu() -> void:
 	paused = true
 	_reset_scene()
 
-	var root := _build_menu_shell()
-	var center := HBoxContainer.new()
-	center.add_theme_constant_override("separation", 18)
+	var root := _build_menu_shell(38)
+	var center := CenterContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(center)
 
-	var menu_panel := _make_translucent_panel(360, 0)
+	var menu_panel := _make_translucent_panel(460, 0)
 	center.add_child(menu_panel)
 
 	var menu_box := VBoxContainer.new()
-	menu_box.add_theme_constant_override("separation", 10)
+	menu_box.add_theme_constant_override("separation", 9)
 	menu_panel.add_child(menu_box)
 
 	menu_box.add_child(_menu_title("RED MERIDIAN", _text("menu.subtitle")))
@@ -249,26 +248,27 @@ func _show_main_menu() -> void:
 	menu_box.add_child(_menu_button(_text("menu.multiplayer"), _show_multiplayer_notice))
 	menu_box.add_child(_menu_button(_text("menu.settings"), _show_settings_screen))
 	menu_box.add_child(_menu_button(_text("menu.about"), _show_about_screen))
-
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 28)
-	menu_box.add_child(spacer)
 	menu_box.add_child(_menu_button(_text("menu.quit"), _quit_game))
 
-	var updates_panel := _make_translucent_panel(430, 0)
-	center.add_child(updates_panel)
+	var updates_row := HBoxContainer.new()
+	updates_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.add_child(updates_row)
+
+	var updates_spacer := Control.new()
+	updates_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	updates_row.add_child(updates_spacer)
+
+	var updates_panel := _make_translucent_panel(390, 0)
+	updates_panel.size_flags_horizontal = Control.SIZE_SHRINK_END
+	updates_row.add_child(updates_panel)
 
 	var updates_box := VBoxContainer.new()
-	updates_box.add_theme_constant_override("separation", 10)
+	updates_box.add_theme_constant_override("separation", 7)
 	updates_panel.add_child(updates_box)
 	updates_box.add_child(_section_title(_text("menu.latest_updates")))
 	updates_box.add_child(_muted_label("- %s" % _text("menu.update_1")))
 	updates_box.add_child(_muted_label("- %s" % _text("menu.update_2")))
 	updates_box.add_child(_muted_label("- %s" % _text("menu.update_3")))
-
-	var fill := Control.new()
-	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center.add_child(fill)
 
 	root.add_child(_footer_label())
 
@@ -327,19 +327,21 @@ func _menu_title(title_text: String, subtitle_text: String) -> Control:
 
 	var title := Label.new()
 	title.text = title_text
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 52)
-	title.add_theme_color_override("font_color", Color.html("#F2F6FF"))
-	title.add_theme_color_override("font_outline_color", Color.html("#111927"))
-	title.add_theme_constant_override("outline_size", 4)
+	title.add_theme_color_override("font_color", Color.html("#F6F0DE"))
+	title.add_theme_color_override("font_outline_color", Color.html("#07111C"))
+	title.add_theme_constant_override("outline_size", 5)
 	if title_font:
 		title.add_theme_font_override("font", title_font)
 	box.add_child(title)
 
 	var subtitle := Label.new()
 	subtitle.text = subtitle_text
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	subtitle.add_theme_font_size_override("font_size", 15)
-	subtitle.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.72))
+	subtitle.add_theme_color_override("font_color", Color(0.92, 0.88, 0.76, 0.78))
 	if body_font:
 		subtitle.add_theme_font_override("font", body_font)
 	box.add_child(subtitle)
@@ -355,12 +357,12 @@ func _menu_button(text: String, callback: Callable) -> Button:
 	button.add_theme_font_size_override("font_size", 15)
 	if body_font:
 		button.add_theme_font_override("font", body_font)
-	button.add_theme_stylebox_override("normal", _style_box(Color(0.11, 0.14, 0.13, 0.88), Color(0.50, 0.57, 0.52, 0.70)))
-	button.add_theme_stylebox_override("hover", _style_box(Color(0.18, 0.22, 0.20, 0.92), Color.html("#80CFA9")))
-	button.add_theme_stylebox_override("pressed", _style_box(Color(0.08, 0.12, 0.13, 0.98), Color.html("#F4D35E")))
-	button.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	button.add_theme_stylebox_override("normal", _style_box(Color(0.065, 0.078, 0.082, 0.90), Color(0.54, 0.49, 0.34, 0.64)))
+	button.add_theme_stylebox_override("hover", _style_box(Color(0.105, 0.120, 0.116, 0.94), Color.html("#C4B26A")))
+	button.add_theme_stylebox_override("pressed", _style_box(Color(0.040, 0.070, 0.082, 0.98), Color.html("#E2D39A")))
+	button.add_theme_color_override("font_color", Color.html("#EFE7D2"))
 	button.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
-	button.add_theme_color_override("font_pressed_color", Color.html("#F4D35E"))
+	button.add_theme_color_override("font_pressed_color", Color.html("#E2D39A"))
 	if callback.is_valid():
 		button.pressed.connect(callback)
 	return button
@@ -380,7 +382,8 @@ func _footer_label() -> Label:
 func _make_translucent_panel(width: int, height: int) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(width, height)
-	panel.add_theme_stylebox_override("panel", _style_box(Color(0.03, 0.05, 0.07, 0.84), Color(0.38, 0.46, 0.52, 0.74)))
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	panel.add_theme_stylebox_override("panel", _style_box(Color(0.018, 0.026, 0.034, 0.88), Color(0.50, 0.46, 0.32, 0.62)))
 	return panel
 
 
@@ -712,7 +715,7 @@ func _show_message_screen(title_text: String, body_text: String) -> void:
 	current_screen = "message"
 	paused = true
 	_reset_scene()
-	var root := _build_menu_shell()
+	var root := _build_menu_shell(54)
 	var panel := _make_translucent_panel(620, 0)
 	root.add_child(panel)
 
@@ -729,8 +732,8 @@ func _show_about_screen() -> void:
 	current_screen = "about"
 	paused = true
 	_reset_scene()
-	var root := _build_menu_shell()
-	var panel := _make_translucent_panel(720, 0)
+	var root := _build_menu_shell(54)
+	var panel := _make_translucent_panel(760, 0)
 	root.add_child(panel)
 
 	var box := VBoxContainer.new()
@@ -756,19 +759,24 @@ func _show_settings_screen(active_tab: int = -1) -> void:
 	if active_tab >= 0:
 		settings_active_tab = active_tab
 	_reset_scene()
-	var root := _build_menu_shell()
-	var panel := _make_translucent_panel(980, 0)
+	var root := _build_menu_shell(44)
+	var panel := _make_translucent_panel(1120, 0)
 	root.add_child(panel)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
+	box.add_theme_constant_override("separation", 14)
 	panel.add_child(box)
 	box.add_child(_section_title(_text("settings.title")))
 
 	var tabs := TabContainer.new()
-	tabs.custom_minimum_size = Vector2(0, 470)
+	tabs.custom_minimum_size = Vector2(0, 500)
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tabs.add_theme_stylebox_override("panel", _style_box(Color(0.018, 0.024, 0.030, 0.78), Color(0.30, 0.36, 0.42, 0.40)))
+	tabs.add_theme_stylebox_override("tab_selected", _style_box(Color(0.070, 0.078, 0.074, 0.96), Color.html("#C4B26A")))
+	tabs.add_theme_stylebox_override("tab_unselected", _style_box(Color(0.030, 0.036, 0.040, 0.86), Color(0.22, 0.27, 0.31, 0.72)))
+	tabs.add_theme_color_override("font_selected_color", Color.html("#F6F0DE"))
+	tabs.add_theme_color_override("font_unselected_color", Color(0.80, 0.82, 0.84, 0.72))
 	box.add_child(tabs)
 
 	tabs.add_child(_wrap_settings_tab(_settings_general_tab()))
@@ -855,6 +863,8 @@ func _settings_general_tab() -> Control:
 func _settings_display_tab() -> Control:
 	var box := _settings_tab(_text("settings.display"))
 
+	box.add_child(_settings_label(_text("settings.monitor")))
+	var monitor_select := _settings_option_button()
 	var monitor_options := []
 	for screen in range(maxi(DisplayServer.get_screen_count(), 1)):
 		var screen_size := _screen_size_for(screen)
@@ -864,7 +874,12 @@ func _settings_display_tab() -> Control:
 			"width": screen_size.x,
 			"height": screen_size.y
 		})])
-	box.add_child(_settings_stepper(_text("settings.monitor"), monitor_options, settings_monitor, _on_monitor_value_selected))
+	for i in range(monitor_options.size()):
+		monitor_select.add_item(String(monitor_options[i][1]))
+		monitor_select.set_item_metadata(i, int(monitor_options[i][0]))
+	_select_option_by_metadata(monitor_select, settings_monitor)
+	monitor_select.item_selected.connect(_on_monitor_selected.bind(monitor_select))
+	box.add_child(monitor_select)
 
 	box.add_child(_settings_label(_text("settings.window_mode")))
 	var mode_select := _settings_option_button()
@@ -880,6 +895,8 @@ func _settings_display_tab() -> Control:
 	mode_select.item_selected.connect(_on_window_mode_selected.bind(mode_select))
 	box.add_child(mode_select)
 
+	box.add_child(_settings_label(_text("settings.resolution")))
+	var resolution_select := _settings_option_button()
 	var resolution_options := []
 	var resolutions := _available_resolutions()
 	for i in range(resolutions.size()):
@@ -888,7 +905,12 @@ func _settings_display_tab() -> Control:
 		if i == 0:
 			label = _text("settings.native_resolution", {"width": resolution.x, "height": resolution.y})
 		resolution_options.append([resolution, label])
-	box.add_child(_settings_stepper(_text("settings.resolution"), resolution_options, settings_resolution, _on_resolution_value_selected))
+	for i in range(resolution_options.size()):
+		resolution_select.add_item(String(resolution_options[i][1]))
+		resolution_select.set_item_metadata(i, resolution_options[i][0])
+	_select_option_by_metadata(resolution_select, settings_resolution)
+	resolution_select.item_selected.connect(_on_resolution_selected.bind(resolution_select))
+	box.add_child(resolution_select)
 
 	box.add_child(_settings_label(_text("settings.frame_rate_cap")))
 	var fps_select := _settings_option_button()
@@ -1063,16 +1085,16 @@ func _wrap_settings_tab(content: VBoxContainer) -> ScrollContainer:
 
 	var scrollbar := scroll.get_v_scroll_bar()
 	scrollbar.custom_minimum_size = Vector2(12, 0)
-	scrollbar.add_theme_stylebox_override("scroll", _style_box(Color(0.04, 0.07, 0.09, 0.72), Color(0.18, 0.24, 0.30, 0.55)))
-	scrollbar.add_theme_stylebox_override("grabber", _style_box(Color(0.27, 0.42, 0.48, 0.82), Color(0.42, 0.62, 0.66, 0.85)))
-	scrollbar.add_theme_stylebox_override("grabber_highlight", _style_box(Color(0.38, 0.62, 0.66, 0.95), Color.html("#80CFA9")))
-	scrollbar.add_theme_stylebox_override("grabber_pressed", _style_box(Color.html("#80CFA9"), Color.html("#CDEFE3")))
+	scrollbar.add_theme_stylebox_override("scroll", _style_box(Color(0.020, 0.026, 0.030, 0.78), Color(0.18, 0.20, 0.22, 0.56)))
+	scrollbar.add_theme_stylebox_override("grabber", _style_box(Color(0.32, 0.30, 0.23, 0.82), Color(0.56, 0.50, 0.34, 0.86)))
+	scrollbar.add_theme_stylebox_override("grabber_highlight", _style_box(Color(0.42, 0.38, 0.26, 0.95), Color.html("#C4B26A")))
+	scrollbar.add_theme_stylebox_override("grabber_pressed", _style_box(Color.html("#C4B26A"), Color.html("#E2D39A")))
 	return scroll
 
 
 func _settings_label(text: String) -> Label:
 	var label := _muted_label(text)
-	label.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.82))
+	label.add_theme_color_override("font_color", Color(0.90, 0.88, 0.80, 0.86))
 	return label
 
 
@@ -1080,7 +1102,7 @@ func _settings_section_label(text: String) -> Label:
 	var label := Label.new()
 	label.text = text.to_upper()
 	label.add_theme_font_size_override("font_size", 12)
-	label.add_theme_color_override("font_color", Color.html("#80CFA9"))
+	label.add_theme_color_override("font_color", Color.html("#C4B26A"))
 	if body_font:
 		label.add_theme_font_override("font", body_font)
 	return label
@@ -1089,7 +1111,7 @@ func _settings_section_label(text: String) -> Label:
 func _settings_hint(text: String) -> Label:
 	var label := _muted_label(text)
 	label.add_theme_font_size_override("font_size", 12)
-	label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.92, 0.62))
+	label.add_theme_color_override("font_color", Color(0.78, 0.76, 0.68, 0.62))
 	return label
 
 
@@ -1100,7 +1122,7 @@ func _add_settings_feedback_toast(parent: Container) -> void:
 	settings_feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	settings_feedback_panel.modulate.a = 0.0
 	settings_feedback_panel.pivot_offset = Vector2(140, 21)
-	settings_feedback_panel.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.10, 0.11, 0.92), Color.html("#80CFA9")))
+	settings_feedback_panel.add_theme_stylebox_override("panel", _style_box(Color(0.050, 0.064, 0.058, 0.94), Color.html("#C4B26A")))
 	parent.add_child(settings_feedback_panel)
 
 	var margin := MarginContainer.new()
@@ -1120,7 +1142,7 @@ func _settings_feedback_label(text: String) -> Label:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 14)
-	label.add_theme_color_override("font_color", Color.html("#80CFA9"))
+	label.add_theme_color_override("font_color", Color.html("#E2D39A"))
 	if body_font:
 		label.add_theme_font_override("font", body_font)
 	return label
@@ -1206,26 +1228,26 @@ func _option_index(options: Array, current_value: Variant) -> int:
 
 func _settings_option_button() -> OptionButton:
 	var option := OptionButton.new()
-	option.custom_minimum_size = Vector2(0, 36)
+	option.custom_minimum_size = Vector2(0, 40)
 	option.add_theme_font_size_override("font_size", 14)
 	if body_font:
 		option.add_theme_font_override("font", body_font)
-	option.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	option.add_theme_color_override("font_color", Color.html("#EFE7D2"))
 	option.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
-	option.add_theme_color_override("font_pressed_color", Color.html("#80CFA9"))
-	option.add_theme_stylebox_override("normal", _style_box(Color(0.04, 0.08, 0.11, 0.94), Color(0.36, 0.46, 0.56, 0.88)))
-	option.add_theme_stylebox_override("hover", _style_box(Color(0.07, 0.13, 0.16, 0.96), Color.html("#80CFA9")))
-	option.add_theme_stylebox_override("pressed", _style_box(Color(0.05, 0.10, 0.13, 0.98), Color.html("#80CFA9")))
+	option.add_theme_color_override("font_pressed_color", Color.html("#E2D39A"))
+	option.add_theme_stylebox_override("normal", _style_box(Color(0.020, 0.034, 0.044, 0.94), Color(0.36, 0.42, 0.48, 0.82)))
+	option.add_theme_stylebox_override("hover", _style_box(Color(0.055, 0.070, 0.072, 0.96), Color.html("#C4B26A")))
+	option.add_theme_stylebox_override("pressed", _style_box(Color(0.045, 0.056, 0.052, 0.98), Color.html("#E2D39A")))
 
 	var popup := option.get_popup()
 	popup.add_theme_font_size_override("font_size", 14)
 	if body_font:
 		popup.add_theme_font_override("font", body_font)
-	popup.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	popup.add_theme_color_override("font_color", Color.html("#EFE7D2"))
 	popup.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
 	popup.add_theme_color_override("font_disabled_color", Color(0.78, 0.84, 0.92, 0.46))
-	popup.add_theme_stylebox_override("panel", _style_box(Color(0.06, 0.08, 0.10, 0.98), Color(0.32, 0.40, 0.48, 0.90)))
-	popup.add_theme_stylebox_override("hover", _style_box(Color(0.12, 0.18, 0.20, 0.98), Color.html("#80CFA9")))
+	popup.add_theme_stylebox_override("panel", _style_box(Color(0.035, 0.040, 0.042, 0.98), Color(0.44, 0.40, 0.28, 0.90)))
+	popup.add_theme_stylebox_override("hover", _style_box(Color(0.100, 0.094, 0.070, 0.98), Color.html("#C4B26A")))
 	return option
 
 
@@ -1236,9 +1258,9 @@ func _settings_checkbox(text: String, value: bool, callback: Callable = Callable
 	check.add_theme_font_size_override("font_size", 14)
 	if body_font:
 		check.add_theme_font_override("font", body_font)
-	check.add_theme_color_override("font_color", Color.html("#DCE6F4"))
+	check.add_theme_color_override("font_color", Color.html("#DED8C7"))
 	check.add_theme_color_override("font_hover_color", Color.html("#FFFFFF"))
-	check.add_theme_color_override("font_pressed_color", Color.html("#80CFA9"))
+	check.add_theme_color_override("font_pressed_color", Color.html("#E2D39A"))
 	if callback.is_valid():
 		check.toggled.connect(callback)
 	return check
@@ -1500,10 +1522,14 @@ func _apply_display_settings() -> void:
 
 
 func _apply_cursor_mode() -> void:
-	if settings_cursor_confined and settings_window_mode != "windowed":
+	if _should_confine_cursor():
 		Input.mouse_mode = Input.MOUSE_MODE_CONFINED
 	else:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _should_confine_cursor() -> bool:
+	return settings_cursor_confined and settings_window_mode == "exclusive_fullscreen"
 
 
 func _apply_audio_settings() -> void:
@@ -2262,7 +2288,7 @@ func _log(message: String) -> void:
 
 func _make_panel() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style_box(Color.html("#0B1524"), Color.html("#1F3148")))
+	panel.add_theme_stylebox_override("panel", _style_box(Color(0.020, 0.034, 0.050, 0.94), Color(0.30, 0.36, 0.44, 0.72)))
 	return panel
 
 
@@ -2271,11 +2297,14 @@ func _style_box(bg: Color, border: Color) -> StyleBoxFlat:
 	style.bg_color = bg
 	style.border_color = border
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(8)
+	style.set_corner_radius_all(6)
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.content_margin_top = 12
 	style.content_margin_bottom = 12
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.30)
+	style.shadow_size = 4
+	style.shadow_offset = Vector2(0, 2)
 	return style
 
 
@@ -2284,7 +2313,7 @@ func _section_title(text: String) -> Label:
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", 19)
-	label.add_theme_color_override("font_color", Color.html("#E8EEF8"))
+	label.add_theme_color_override("font_color", Color.html("#F4EBD4"))
 	if body_font:
 		label.add_theme_font_override("font", body_font)
 	return label
@@ -2295,7 +2324,7 @@ func _muted_label(text: String) -> Label:
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", 14)
-	label.add_theme_color_override("font_color", Color(0.86, 0.91, 0.98, 0.66))
+	label.add_theme_color_override("font_color", Color(0.86, 0.84, 0.78, 0.72))
 	if body_font:
 		label.add_theme_font_override("font", body_font)
 	return label

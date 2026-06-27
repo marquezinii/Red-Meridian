@@ -39,6 +39,9 @@ func _initialize() -> void:
 	if blank_stepper != "":
 		_fail("Settings stepper has an empty selected label: %s" % blank_stepper)
 		return
+	if _has_stepper_arrow_button(main_scene):
+		_fail("Display settings still expose arrow steppers.")
+		return
 	main_scene.settings_window_mode = "borderless"
 	main_scene.settings_resolution = Vector2i(1920, 1080)
 	main_scene._apply_all_settings()
@@ -47,6 +50,19 @@ func _initialize() -> void:
 		return
 	if main_scene.settings_resolution != Vector2i(1920, 1080):
 		_fail("Borderless apply overwrote the selected resolution setting.")
+		return
+	main_scene.settings_cursor_confined = true
+	main_scene.settings_window_mode = "windowed"
+	if main_scene._should_confine_cursor():
+		_fail("Cursor would be confined in windowed mode.")
+		return
+	main_scene.settings_window_mode = "borderless"
+	if main_scene._should_confine_cursor():
+		_fail("Cursor would be confined in borderless fullscreen mode.")
+		return
+	main_scene.settings_window_mode = "exclusive_fullscreen"
+	if not main_scene._should_confine_cursor():
+		_fail("Cursor would not be confined in exclusive fullscreen mode.")
 		return
 
 	main_scene._show_settings_screen(3)
@@ -134,6 +150,17 @@ func _find_blank_stepper_label(node: Node) -> String:
 		if result != "":
 			return result
 	return ""
+
+
+func _has_stepper_arrow_button(node: Node) -> bool:
+	if node is Button:
+		var button := node as Button
+		if button.text == "<" or button.text == ">":
+			return true
+	for child in node.get_children():
+		if _has_stepper_arrow_button(child):
+			return true
+	return false
 
 
 func _fail(message: String) -> void:
